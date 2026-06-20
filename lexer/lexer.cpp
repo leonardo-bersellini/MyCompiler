@@ -25,7 +25,7 @@ QList<Token> Lexer::analiseString(const QString &string, ErrorLog &_errorLog)
     currentTextPos.column = 0;
     currentTextPos.line = 0;
 
-    buffer.remove("\n");
+    //buffer.remove("\n");
     buffer.remove("\r");
 
     while(!isAtEnd())
@@ -33,6 +33,9 @@ QList<Token> Lexer::analiseString(const QString &string, ErrorLog &_errorLog)
         QChar c = peek();
 
         if(c == ' ') {
+            advance();
+        }
+        else if(c == '\n') {
             advance();
         }
         else if(c.isDigit())

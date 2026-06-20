@@ -32,11 +32,18 @@ private:
 
     std::unique_ptr<Stmt> parseStatement();
 
+    std::unique_ptr<Stmt> parseScopeStmt();
+    std::unique_ptr<Stmt> parseAssignStmt();
+    std::unique_ptr<Stmt> parseDeclarationStmt();
+    std::unique_ptr<Stmt> parseIfStmt();
+
+    std::unique_ptr<Expr> parseExpr();
+
     std::unique_ptr<Expr> parseLogicalOr();
     std::unique_ptr<Expr> parseLogicalAnd();
     std::unique_ptr<Expr> parseComparison();
 
-    std::unique_ptr<Expr> parseExpression();
+    std::unique_ptr<Expr> parseMathExpression();
     std::unique_ptr<Expr> parseTerm();
     std::unique_ptr<Expr> parseFactor();
 };

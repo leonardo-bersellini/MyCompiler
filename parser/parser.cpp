@@ -1,6 +1,7 @@
 #include "parser.h"
 
 #include <memory>
+#include <iostream>
 #include "keywords.h"
 
 Parser::Parser() {}
@@ -78,7 +79,7 @@ std::unique_ptr<Program> Parser::parseProgram(const QList<Token>& tokens, ErrorL
 }
 
 /*
- * Funzione di parsing di ogni statement.
+ * Funzione di parsing di ogni statement. [entry point del parsing stmt]
  * Rispecchiando la grammatica del linguaggio, interpreta le sequenze di token in modo da
  * formare degli statements, controllando la presenza di terminatori e caratteri di grammatica.
  * In sintesi si occupa di riconoscere quale tipo di stmt corrisponde ai token presenti, 
@@ -87,64 +88,33 @@ std::unique_ptr<Program> Parser::parseProgram(const QList<Token>& tokens, ErrorL
 
 std::unique_ptr<Stmt> Parser::parseStatement()
 {
-    if(check(TokenType::Identifier) && peek(1).type == TokenType::Equal)
+    if(check(TokenType::LBrace))
+    {
+        // Nuovo Scope
+        return parseScopeStmt();
+    }
+    else if(check(TokenType::Identifier) && peek(1).type == TokenType::Equal)
     {
         // Assegnazione
 
-        QString name = advance().lexeme; //consuma l'identificatore
-        advance();                       //consuma '='
-        auto expr = parseExpression();   //rimangono i token dell'espressione
-        expect(TokenType::Semicolon);    //expect ; after
-
-        //ritorna uno stmt di assegnazione
-        auto stmt = std::make_unique<AssignmentStmt>();
-        stmt->name = name;
-        stmt->value = std::move(expr);
-        return stmt;
+        return parseAssignStmt();
     }
     else if(check(TokenType::TypeKeyword))
     {
-        if(peek(2).type == TokenType::Equal)
-        {
-            //dichiarazione con inizializzazione
+        //Dichiarazione
 
-            QString type = advance().lexeme;        // consuma TypeKeyword
-            QString name = peek().lexeme;           // legge il nome presumendo che sia un identifier
-            bool isValid = expect(TokenType::Identifier); // verifica identifier e lo consuma
+        return parseDeclarationStmt();
+    }
+    else if(check(TokenType::IfKeyword))
+    {
+        // If Statement
 
-            if(!isValid) {
-                /* Ritorna un errorStmt se la variabile non corrisponde ad un identifier,
-                 * in modo da evitare che sia costruita una variabile con un token invalido */
-                return std::make_unique<ErrorStmt>();;
-            }
-
-            advance();      //consuma '=' se l'identifier è valido
-
-            auto initExpr = parseExpression();
-            expect(TokenType::Semicolon);
-
-            auto d = std::make_unique<DeclarationStmt>();
-            d->type = toValueType(type); //QString -> ValueType
-            d->name = name;
-            d->initializer = std::move(initExpr);
-            return d;
-
-        } else {
-            //dichiarzione pura
-            QString type = advance().lexeme;  //consuma TypeKeyword
-            QString name = advance().lexeme;   // consuma Identifier
-            expect(TokenType::Semicolon);
-
-            auto d = std::make_unique<DeclarationStmt>();
-            d->type = toValueType(type); //QString -> ValueType
-            d->name = name;
-            d->initializer = nullptr; //nessun initializer
-            return d;
-        }
+        return parseIfStmt();
 
     } else {
         // Espressione
-        auto expr = parseExpression();   //risolve direttamente l'espressione
+
+        auto expr = parseExpr();   //risolve direttamente l'espressione
         expect(TokenType::Semicolon);
 
         //ritorna uno stmt di espressione
@@ -152,11 +122,170 @@ std::unique_ptr<Stmt> Parser::parseStatement()
         stmt->expr = std::move(expr);
         return stmt;
     }
+
+    return std::make_unique<ErrorStmt>();
 }
 
 /**
- * FUNZIONI DI PARSING
- * Questa funzioni sono chiamate in ordin di precedenza a seguito di parseStmt.
+ * FUNZIONI DI PARSING <STMT>
+ * Queste funzioni sottostanti hanno il compito di racchiudere la logica di gestione e creazione
+ * di oggetti stmt, in modo da mantenere la struttura di dispatch generale (parseStmt) più pulita,
+ * ed anche in modo da rendere ogni logica di parsing richiamabile da più punti.
+ * END
+ *
+ * Nota: lo scopo pricipale è la pulizia del codice.
+ */
+
+/*
+ * Funzione di parsing dei blocchi scope {...}.
+ * Questa funzione si occupa del parsing di un nuovo scope, che ritorna uno stmt di tipo Block,
+ * contenente una serie di altri stmt, ovvero le istruzioni da eseguire in quello scope.
+ * In caso di errore, ritorna un errorStmt.
+ */
+
+std::unique_ptr<Stmt> Parser::parseScopeStmt()
+{
+    expect(TokenType::LBrace); // verifica e consuma '{'
+
+    auto scope = std::make_unique<BlockStmt>();
+
+    while(!isAtEnd() && peek().type != TokenType::RBrace)
+    {
+        scope->statements.push_back(parseStatement()); //ogni scope contiene un elenco di stmt
+    }
+
+    if(isAtEnd()) {
+        errorLog->addError("Expected '}' before end of file", tokens.at(currentPos).position);
+    } else {
+        bool closed = expect(TokenType::RBrace);
+
+        if(!closed) {
+            auto s = std::make_unique<ErrorStmt>();
+            return s;
+        }
+    }
+
+    return scope;
+}
+
+/*
+ * Funzione di parsing degli stmt di assegnazione.
+ * Caso diverso dall'assegnazione gestita in inizializzazione.
+ */
+
+std::unique_ptr<Stmt> Parser::parseAssignStmt()
+{
+    QString name = advance().lexeme; //consuma l'identificatore
+    advance();                       //consuma '='
+    auto expr = parseExpr();   //rimangono i token dell'espressione
+    expect(TokenType::Semicolon);    //expect ; after
+
+    //ritorna uno stmt di assegnazione
+    auto stmt = std::make_unique<AssignmentStmt>();
+    stmt->name = name;
+    stmt->value = std::move(expr);
+    return stmt;
+}
+
+/*
+ * Funzione di parsing degli stmt di dichiarazione.
+ * Le dichiarazioni si dividono in "pure" e "con inizializzazione".
+ * ovvero int x; e int x = 5;
+ */
+
+std::unique_ptr<Stmt> Parser::parseDeclarationStmt()
+{
+    if(peek(2).type == TokenType::Equal)
+    {
+        // --- Dichiarazione con inizializzazione --- //
+
+        QString type = advance().lexeme;        // consuma TypeKeyword
+        QString name = peek().lexeme;           // legge il nome presumendo che sia un identifier
+        bool isValid = expect(TokenType::Identifier); // verifica identifier e lo consuma
+
+        if(!isValid)
+        {
+            return std::make_unique<ErrorStmt>();;
+        }
+
+        advance();      //consuma '=' se l'identifier è valido
+
+        auto initExpr = parseExpr();
+        expect(TokenType::Semicolon);
+
+        auto d = std::make_unique<DeclarationStmt>();
+        d->type = toValueType(type); //QString -> ValueType
+        d->name = name;
+        d->initializer = std::move(initExpr);
+        return d;
+    }
+    else
+    {
+        // --- Dichiarazione pura --- //
+        QString type = advance().lexeme;  //consuma TypeKeyword
+        QString name = advance().lexeme;   // consuma Identifier
+        expect(TokenType::Semicolon);
+
+        auto d = std::make_unique<DeclarationStmt>();
+        d->type = toValueType(type); //QString -> ValueType
+        d->name = name;
+        d->initializer = nullptr; //nessun initializer
+        return d;
+    }
+}
+
+/*
+ * Funzione di parsing degli stmt di tipo if.
+ * Controlla anche la struttura elif/else, che annida un if dentro l'altro.
+ */
+
+std::unique_ptr<Stmt> Parser::parseIfStmt()
+{
+    advance();                      //consuma 'if' oppure 'elif'
+    expect(TokenType::LParen);
+    auto condition = parseExpr();   // Lettura della condizione tra parentesi
+    expect(TokenType::RParen);
+
+
+    // --- if body --- //
+    std::unique_ptr<Stmt> body;
+
+    if(check(TokenType::LBrace))   // Permette di scrivere un singolo stmt senza racchiuderlo in uno scope {}
+        body = parseScopeStmt();   // scope {}
+    else
+        body = parseStatement();   // singolo stmt
+
+
+    // --- elif --- //
+    std::unique_ptr<Stmt> elseBranch = nullptr;
+
+    if(check(TokenType::ElifKeyword)) {
+        elseBranch = parseIfStmt(); //ricorsione e annidamento nuovo if
+    }
+
+    // --- else --- //
+    else if(check(TokenType::ElseKeyword)) {
+        advance(); //consuma 'else'
+
+        if(check(TokenType::LBrace))
+            elseBranch = parseScopeStmt();
+        else
+            elseBranch = parseStatement();
+    }
+
+    // --- nodo if --- //
+    auto ifStmt = std::make_unique<IfStmt>();
+    ifStmt->condition = std::move(condition);
+    ifStmt->thenBranch = std::move(body);
+    ifStmt->elseBranch = std::move(elseBranch);
+    return ifStmt;
+}
+
+/**
+ * FUNZIONI DI PARSING <EXPR>
+ * Questa funzioni sono chiamate in ordine di precedenza a seguito di parseStmt, tramite il
+ * punto di ingresso parseExpr(), che ha il compito di instradare correttamente il parsing partendo
+ * dal livello più esterno della catena.
  * In base all'ordine di precedenza degli operatori, si controlla in ogni funzione se è presente
  * l'operatore a cui essa è dedicata. Le prime funzioni ad essere chiamate sono, per struttura, quelle
  * corrispondenti agli operatori con precedenza più bassa. La precedenza è indicata dall'ordine di
@@ -168,13 +297,22 @@ std::unique_ptr<Stmt> Parser::parseStatement()
  * END
  *
  * nota: se si desidera modificare la funzione a top-level della catena (corrispondente alla più
- * bassa precedenza), allora sarà necessario sostituire tutte le chiamate a quella stessa funzione con
- * le chiamate alla nuova in parseStmt, che da il via alla catena.
- *
- * nota: tutte le funzioni ritornano un ptr ad un Expr, questo oggetto però indica una qualsiasi
- * espressione di codice, diversa dal concetto di espressione della funzione parseExpression, che indica
- * un'espressione matematica.
+ * bassa precedenza), allora sarà necessario sostituire la chiamate nell'entry-point parseExpr() con
+ * la chiamata alla nuova funzione che si desidera aggiungere in cima alla catena.
  **/
+
+/*
+ * Punto di ingresso della catena di parsing degli oggetti <Expr>.
+ * Ha il compito di richiamare la prima funzione della catena, fungendo da
+ * entry point modificabile.
+ * Richiama la prima funzione della catena di parsing<Expr>.
+ */
+
+std::unique_ptr<Expr> Parser::parseExpr()
+{
+    return parseLogicalOr();
+}
+
 
 /*
  * Punto di ingresso delle funzioni di parsing per operatori logici.
@@ -209,7 +347,8 @@ std::unique_ptr<Expr> Parser::parseLogicalAnd()
 {
     auto left = parseComparison();
 
-    while(check(TokenType::LogicalAnd)) {
+    while(check(TokenType::LogicalAnd))
+    {
         TokenType op = advance().type;
         auto right = parseComparison();
 
@@ -230,12 +369,13 @@ std::unique_ptr<Expr> Parser::parseLogicalAnd()
 
 std::unique_ptr<Expr> Parser::parseComparison()
 {
-    auto left = parseExpression();
+    auto left = parseMathExpression();
 
     while (check(TokenType::EqualEqual) || check(TokenType::Less) || check(TokenType::Greater)
-           || check(TokenType::LessEqual) || check(TokenType::GreaterEqual) || check(TokenType::NotEqual)) {
+           || check(TokenType::LessEqual) || check(TokenType::GreaterEqual) || check(TokenType::NotEqual))
+    {
         TokenType op = advance().type;
-        auto right = parseExpression();
+        auto right = parseMathExpression();
 
         auto binExpr = std::make_unique<BinaryExpr>();
         binExpr->op = op;
@@ -255,12 +395,13 @@ std::unique_ptr<Expr> Parser::parseComparison()
  *  di conseguenza, al livello più basso di precedenza matematica (poichè è il primo ad essere letto).
  */
 
-std::unique_ptr<Expr> Parser::parseExpression()
+std::unique_ptr<Expr> Parser::parseMathExpression()
 {
     auto left = parseTerm();
     
     // Livello più basso di precedenza matematica [+ , -]
-    while(check(TokenType::Plus) || check(TokenType::Minus)) {
+    while(check(TokenType::Plus) || check(TokenType::Minus))
+    {
         TokenType op = advance().type; //consuma l'operatore
         auto right = parseTerm();
         
@@ -289,7 +430,8 @@ std::unique_ptr<Expr> Parser::parseTerm()
     auto left = parseFactor();
     
     // Livello superiore di precedenza matematica [* , /]
-    while(check(TokenType::Star) || check(TokenType::Slash)) {
+    while(check(TokenType::Star) || check(TokenType::Slash))
+    {
         TokenType op = advance().type; //consuma l'operatore
         auto right = parseFactor();
         
@@ -383,7 +525,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
     {
         advance(); //consuma il token '('
 
-        auto expr = parseExpression(); //call ricorsiva
+        auto expr = parseMathExpression(); //call ricorsiva
         expect(TokenType::RParen);
         return expr;
     }

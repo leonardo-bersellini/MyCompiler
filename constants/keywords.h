@@ -13,7 +13,9 @@ inline const QMap<QString, TokenType> keywords = {
     {"bool", TokenType::TypeKeyword},
     {"true", TokenType::BoolLiteral},
     {"false", TokenType::BoolLiteral},
-    // futuro: {"if", TokenType::If}, {"while", TokenType::While}
+    {"if", TokenType::IfKeyword},
+    {"else", TokenType::ElseKeyword},
+    {"elif", TokenType::ElifKeyword},
 };
 
 #endif // KEYWORDS_H

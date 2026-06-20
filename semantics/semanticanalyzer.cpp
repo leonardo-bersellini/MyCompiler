@@ -48,8 +48,20 @@ void SemanticAnalyzer::analyzeProgram(const Program &program, ErrorLog &errorLog
 
 void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
 {
+    // Nuovo Scope
+    if(auto s = dynamic_cast<const BlockStmt*>(stmt))
+    {
+        pushScope(); //crea un nuovo scope
+
+        for(const auto& st : s->statements) {
+            analyzeStmt(st.get());
+        }
+
+        popScope(); //chiude lo scope corrente
+    }
+
     // Assegnazione
-    if(auto s = dynamic_cast<const AssignmentStmt*>(stmt))
+    else if(auto s = dynamic_cast<const AssignmentStmt*>(stmt))
     {
         // risultato dell'espressione di assegnazione, valore che si sta assegnando
         ExprAnalysisResult valueResult = analyzeExpr(s->value.get());
@@ -93,6 +105,22 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
             errorLog->addError("redeclaration of variable: " + s->name);
         } else {
             declareSymbol(s->name, SymbolInfo{s->type});
+        }
+    }
+
+    // If Condition
+    else if(auto s = dynamic_cast<const IfStmt*>(stmt))
+    {
+        ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
+
+        if(condResult.value_type != ValueType::Bool && condResult.value_type != ValueType::Error) {
+            errorLog->addError("if condition must be of type boolean");
+        }
+
+        analyzeStmt(s->thenBranch.get()); //il body è uno stmt
+
+        if(s->elseBranch) {
+            analyzeStmt(s->elseBranch.get()); // se != nullptr
         }
     }
 

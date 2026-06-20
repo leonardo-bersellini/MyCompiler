@@ -84,12 +84,19 @@ public:
     QString name;
     std::unique_ptr<Expr> initializer; //contiene le informazioni di un'eventuale inizializzazione
 };
-/*
+
 class BlockStmt : public Stmt {
 public:
-
+    std::vector<std::unique_ptr<Stmt>> statements;
 };
-*/
+
+class IfStmt : public Stmt {
+public:
+    std::unique_ptr<Expr> condition; //boolean condition
+    std::unique_ptr<Stmt> thenBranch; //contenuto tra {}
+    std::unique_ptr<Stmt> elseBranch; //può contenere un altro if
+};
+
 class ErrorStmt : public Stmt {
 public:
     //void, placeholder per error stmt
