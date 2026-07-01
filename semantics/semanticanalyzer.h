@@ -24,6 +24,8 @@ private:
     QList<QMap<QString, SymbolInfo>> scopeStack; //permette una lista di scope diversi
     ErrorLog* errorLog;
 
+    int loopDepth = 0; //contatore dell'anidamento dei cicli iterativi
+
 
     bool isAssignmentCompatible(ValueType variableType, ValueType assignType);
 

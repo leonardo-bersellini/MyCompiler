@@ -35,6 +35,8 @@ void SemanticAnalyzer::analyzeProgram(const Program &program, ErrorLog &errorLog
     this->scopeStack.clear();
     this->scopeStack.append(QMap<QString, SymbolInfo>()); //scope globale
 
+    this->loopDepth = 0;
+
     for(const auto& s : program.statements) {
         analyzeStmt(s.get());
     }
@@ -121,6 +123,56 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
 
         if(s->elseBranch) {
             analyzeStmt(s->elseBranch.get()); // se != nullptr
+        }
+    }
+
+    // For Loop
+    else if(auto s = dynamic_cast<const ForStmt*>(stmt))
+    {
+        pushScope(); // scope che racchiude init, condition, update, body
+
+        if(s->init) analyzeStmt(s->init.get());
+        if(s->condition) {
+            ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
+            if(condResult.value_type != ValueType::Bool && condResult.value_type != ValueType::Error) {
+                errorLog->addError("la condizione del for deve essere di tipo bool");
+            }
+        }
+        if(s->update) analyzeExpr(s->update.get());
+
+        loopDepth++;
+        analyzeStmt(s->body.get());
+        loopDepth--;
+
+        popScope();
+    }
+
+    // While Loop
+    else if(auto s = dynamic_cast<const WhileStmt*>(stmt))
+    {
+        ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
+        if(condResult.value_type != ValueType::Bool && condResult.value_type != ValueType::Error) {
+            errorLog->addError("la condizione del while deve essere di tipo bool");
+        }
+
+        loopDepth++;
+        analyzeStmt(s->body.get());
+        loopDepth--;
+    }
+
+    // Break Stmt
+    else if(dynamic_cast<const BreakStmt*>(stmt))
+    {
+        if(loopDepth == 0) {
+            errorLog->addError("break fuori da un ciclo");
+        }
+    }
+
+    // continue Stmt
+    else if(dynamic_cast<const ContinueStmt*>(stmt))
+    {
+        if(loopDepth == 0) {
+            errorLog->addError("continue fuori da un ciclo");
         }
     }
 

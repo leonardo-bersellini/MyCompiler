@@ -97,6 +97,26 @@ public:
     std::unique_ptr<Stmt> elseBranch; //può contenere un altro if
 };
 
+class ForStmt : public Stmt {
+public:
+    std::unique_ptr<Stmt> init;
+    std::unique_ptr<Expr> condition;
+    std::unique_ptr<Expr> update;
+    std::unique_ptr<Stmt> body;
+};
+
+class WhileStmt : public Stmt {
+public:
+    std::unique_ptr<Expr> condition;
+    std::unique_ptr<Stmt> body;
+};
+
+class BreakStmt : public Stmt {
+};
+
+class ContinueStmt : public Stmt {
+};
+
 class ErrorStmt : public Stmt {
 public:
     //void, placeholder per error stmt

@@ -110,6 +110,36 @@ std::unique_ptr<Stmt> Parser::parseStatement()
         // If Statement
 
         return parseIfStmt();
+    }
+    else if(check(TokenType::WhileKeyword))
+    {
+        // While Statement
+
+        return parseWhileStmt();
+    }
+    else if(check(TokenType::ForKeyword))
+    {
+        // For Statement
+
+        return parseForStmt();
+
+    }
+    else if(check(TokenType::BreakKeyword))
+    {
+        // Break Instruction
+
+        advance();                       // consuma 'break'
+        expect(TokenType::Semicolon);    // consuma ';'
+        return std::make_unique<BreakStmt>();
+
+    }
+    else if(check(TokenType::ContinueKeyword))
+    {
+        // Continue Instruction
+
+        advance();                       // consuma 'continue'
+        expect(TokenType::Semicolon);    // consuma ';'
+        return std::make_unique<ContinueStmt>();
 
     } else {
         // Espressione
@@ -166,6 +196,25 @@ std::unique_ptr<Stmt> Parser::parseScopeStmt()
     }
 
     return scope;
+}
+
+/*
+ *Questa funzione ritorna il parsing di uno scope, permettendo però come opzione valida
+ * anche una sola istruzione senza {} branches per delimitare lo scope.
+ * Questa struttura permette di scrivere singoli stmt al posto di uno scope
+ * come istruzioni per delle keyword (if, for...).
+ */
+
+std::unique_ptr<Stmt> Parser::parseBranchBody()
+{
+    std::unique_ptr<Stmt> body;
+
+    if(check(TokenType::LBrace))
+        body = parseScopeStmt();
+    else
+        body = parseStatement();
+
+    return body;
 }
 
 /*
@@ -250,11 +299,7 @@ std::unique_ptr<Stmt> Parser::parseIfStmt()
     // --- if body --- //
     std::unique_ptr<Stmt> body;
 
-    if(check(TokenType::LBrace))   // Permette di scrivere un singolo stmt senza racchiuderlo in uno scope {}
-        body = parseScopeStmt();   // scope {}
-    else
-        body = parseStatement();   // singolo stmt
-
+    body = parseBranchBody();
 
     // --- elif --- //
     std::unique_ptr<Stmt> elseBranch = nullptr;
@@ -267,10 +312,7 @@ std::unique_ptr<Stmt> Parser::parseIfStmt()
     else if(check(TokenType::ElseKeyword)) {
         advance(); //consuma 'else'
 
-        if(check(TokenType::LBrace))
-            elseBranch = parseScopeStmt();
-        else
-            elseBranch = parseStatement();
+        elseBranch = parseBranchBody();
     }
 
     // --- nodo if --- //
@@ -279,6 +321,81 @@ std::unique_ptr<Stmt> Parser::parseIfStmt()
     ifStmt->thenBranch = std::move(body);
     ifStmt->elseBranch = std::move(elseBranch);
     return ifStmt;
+}
+
+/*
+ * Funzione di parsing degli stmt di tipo for.
+ * esegue il controllo delle condizioni (init, cond, update) facoltative e crea un forstmt.
+ *
+ * Schema concettuale:
+ * 'for' '(' init? ';' condition? ';' update? ')' body
+ *
+ * ognuno di questi elementi può essere assente (membri di forStmt nullptr).
+ */
+
+std::unique_ptr<Stmt> Parser::parseForStmt()
+{
+    advance(); //consuma 'for'
+
+    auto forStmt = std::make_unique<ForStmt>();
+
+    expect(TokenType::LParen);
+
+    // --- controllo init --- //
+
+    if(check(TokenType::Semicolon)) {
+        advance(); //consuma ';'
+    } else {
+        auto init = parseStatement();
+        forStmt->init = std::move(init);
+    }
+
+    // --- controllo condition --- //
+
+    if(check(TokenType::Semicolon)) {
+        advance();
+    } else {
+        auto cond = parseExpr();
+        forStmt->condition = std::move(cond);
+
+        expect(TokenType::Semicolon);
+    }
+
+    // --- controllo update --- //
+    if(check(TokenType::RParen)) {
+        advance();
+    } else {
+        auto update = parseExpr();
+        forStmt->update = std::move(update);
+
+        expect(TokenType::RParen);
+    }
+
+    auto body = parseBranchBody();
+    forStmt->body = std::move(body);
+
+    return forStmt;
+}
+
+/*
+ * Questa funzione si occupa del parsing degli stmt dei cicli while.
+ */
+
+std::unique_ptr<Stmt> Parser::parseWhileStmt()
+{
+    advance(); //consuma 'while'
+
+    expect(TokenType::LParen);
+    auto cond = parseExpr();
+    expect(TokenType::RParen);
+
+    auto body = parseBranchBody();
+
+    auto wStmt = std::make_unique<WhileStmt>();
+    wStmt->condition = std::move(cond);
+    wStmt->body = std::move(body);
+
+    return wStmt;
 }
 
 /**
@@ -525,7 +642,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
     {
         advance(); //consuma il token '('
 
-        auto expr = parseMathExpression(); //call ricorsiva
+        auto expr = parseExpr(); //call ricorsiva
         expect(TokenType::RParen);
         return expr;
     }

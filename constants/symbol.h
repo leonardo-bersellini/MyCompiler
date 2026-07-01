@@ -41,6 +41,12 @@ inline ValueType toValueType(const QString& typeName) {
     return ValueType::Error;
 }
 
+/** SYMBOL
+ *  per simbolo si intendono tutti gli identifier ed in generale le parole che fungono da
+ *  riferimento per qualcosa (variabili per valore, funzioni per parti di codice), e che non sono
+ *  parole chiave, ma scritte in modo arbitrario dall'utente.
+ **/
+
 struct SymbolInfo {
     ValueType type;
 };

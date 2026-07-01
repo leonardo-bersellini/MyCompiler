@@ -32,10 +32,14 @@ private:
 
     std::unique_ptr<Stmt> parseStatement();
 
+    std::unique_ptr<Stmt> parseBranchBody();
+
     std::unique_ptr<Stmt> parseScopeStmt();
     std::unique_ptr<Stmt> parseAssignStmt();
     std::unique_ptr<Stmt> parseDeclarationStmt();
     std::unique_ptr<Stmt> parseIfStmt();
+    std::unique_ptr<Stmt> parseForStmt();
+    std::unique_ptr<Stmt> parseWhileStmt();
 
     std::unique_ptr<Expr> parseExpr();
 

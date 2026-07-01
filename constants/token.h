@@ -16,10 +16,16 @@ enum class TokenType {
     BoolLiteral,
 
     Identifier,
+
     TypeKeyword,
     IfKeyword,
     ElseKeyword,
     ElifKeyword,
+    ForKeyword,
+    WhileKeyword,
+
+    BreakKeyword,
+    ContinueKeyword,
 
     Plus,
     Minus,
@@ -103,6 +109,12 @@ inline QString typeToString(TokenType type) {
     case TokenType::ElseKeyword: typeStr = "ElseKeyword";
         break;
     case TokenType::ElifKeyword: typeStr = "ElifKeyword";
+        break;
+    case TokenType::ForKeyword: typeStr = "ForKeyword";
+        break;
+    case TokenType::BreakKeyword: typeStr = "BreakKeyword";
+        break;
+    case TokenType::ContinueKeyword: typeStr = "ContinueKeyword";
         break;
     }
     return typeStr;

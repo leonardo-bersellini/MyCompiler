@@ -25,7 +25,6 @@ QList<Token> Lexer::analiseString(const QString &string, ErrorLog &_errorLog)
     currentTextPos.column = 0;
     currentTextPos.line = 0;
 
-    //buffer.remove("\n");
     buffer.remove("\r");
 
     while(!isAtEnd())
@@ -66,9 +65,30 @@ QList<Token> Lexer::analiseString(const QString &string, ErrorLog &_errorLog)
             Token tmin = createToken(TokenType::Minus);
             tokens.append(tmin);
         }
-        else if(c == '/') {
-            Token tdiv = createToken(TokenType::Slash);
-            tokens.append(tdiv);
+        else if(c == '/')
+        {
+            if(peek(1) == '/') {
+                // commento '//'
+                while(!isAtEnd() && peek() != '\n') {
+                    advance();
+                }
+            }
+            else if(peek(1) == '*') {
+                // commento '/*'
+                while(!isAtEnd() && !(peek() == '*' && peek(1) == '/')) {
+                    advance();
+                }
+
+                if(isAtEnd()) {
+                    errorLog->addError("Unterminated multi-line comment", currentTextPos);
+                } else {
+                    advance(); //consuma '*'
+                    advance(); //consuma '/'
+                }
+            } else {
+                Token tdiv = createToken(TokenType::Slash);
+                tokens.append(tdiv);
+            }
         }
         else if(c == '*') {
             Token tstar = createToken(TokenType::Star);

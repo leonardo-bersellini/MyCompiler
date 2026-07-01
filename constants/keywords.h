@@ -16,6 +16,10 @@ inline const QMap<QString, TokenType> keywords = {
     {"if", TokenType::IfKeyword},
     {"else", TokenType::ElseKeyword},
     {"elif", TokenType::ElifKeyword},
+    {"for", TokenType::ForKeyword},
+    {"while", TokenType::WhileKeyword},
+    {"break", TokenType::BreakKeyword},
+    {"continue", TokenType::ContinueKeyword},
 };
 
 #endif // KEYWORDS_H
