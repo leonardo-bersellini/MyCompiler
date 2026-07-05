@@ -1,3 +1,7 @@
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/CMakeFiles/intrinsics_gen.dir
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/CMakeFiles/omp_gen.dir
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/CMakeFiles/acc_gen.dir
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/CMakeFiles/RISCVTargetParserTableGen.dir
 C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/CMakeFiles/MyCompiler.dir
 C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/CMakeFiles/edit_cache.dir
 C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/CMakeFiles/rebuild_cache.dir

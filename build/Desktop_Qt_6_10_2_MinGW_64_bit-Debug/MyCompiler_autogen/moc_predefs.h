@@ -412,6 +412,7 @@
 #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 #define __MINGW64__ 1
 #define __GCC_DESTRUCTIVE_SIZE 64
+#define _FILE_OFFSET_BITS 64 -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS
 #define __INTMAX_WIDTH__ 64
 #define __cpp_runtime_arrays 198712L
 #define __FLT32_DIG__ 6

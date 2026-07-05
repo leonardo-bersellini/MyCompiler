@@ -33,12 +33,19 @@ void SemanticAnalyzer::analyzeProgram(const Program &program, ErrorLog &errorLog
 {
     this->errorLog = &errorLog;
     this->scopeStack.clear();
-    this->scopeStack.append(QMap<QString, SymbolInfo>()); //scope globale
-
+    this->functionTable.clear();
+    this->currentFunction = nullptr;
     this->loopDepth = 0;
+
+    this->scopeStack.append(QMap<QString, SymbolInfo>()); //scope globale
 
     for(const auto& s : program.statements) {
         analyzeStmt(s.get());
+    }
+
+    qDebug() << "FUNCTION TABLE:";
+    for(const auto& [key, a] : this->functionTable.asKeyValueRange()) {
+        qDebug() << key;
     }
 }
 
@@ -97,6 +104,11 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
             //risultato dell'espressione in assegnazione, valore che si sta assegnando
             ExprAnalysisResult initResult = analyzeExpr(s->initializer.get());
 
+            if(s->type == ValueType::Void) {
+                errorLog->addError("variable declared void");
+                return;
+            }
+
             if (!isAssignmentCompatible(s->type, initResult.value_type)) {
                 errorLog->addError("tipo incompatibile nell'inizializzazione di " + s->name + "  " +
                                    "[confronto tra " + toString(s->type) + " e " + toString(initResult.value_type) + "]");
@@ -107,6 +119,72 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
             errorLog->addError("redeclaration of variable: " + s->name);
         } else {
             declareSymbol(s->name, SymbolInfo{s->type});
+        }
+    }
+
+    // Function Declaration
+    else if(auto s = dynamic_cast<const FunctionStmt*>(stmt))
+    {
+        if(functionTable.contains(s->name)) {
+            // funzione già dichiarata
+            errorLog->addError("redeclaration of function:" + s->name);
+            return;
+        }
+
+        // --- raccolta dei tipi dei parametri --- //
+        std::vector<ValueType> paramsType;
+
+        for(const FunctionParam& p : s->params) {
+            paramsType.push_back(p.type);
+        }
+
+        // --- insert nella tabella --- //
+        functionTable.insert(s->name, FunctionInfo{s->returnType, paramsType});
+
+        // --- analisi del codice della funzione --- //
+        pushScope();
+
+        // dichiarazione dei parametri come variabili nello scope
+        for(const FunctionParam& p : s->params) {
+            declareSymbol(p.name, SymbolInfo{p.type});
+        }
+
+        currentFunction = &functionTable[s->name];
+
+        analyzeStmt(s->body.get());
+
+        popScope();
+
+        currentFunction = nullptr;
+    }
+
+    // Return Stmt
+    else if(auto s = dynamic_cast<const ReturnStmt*>(stmt))
+    {
+        if(currentFunction == nullptr) {
+            errorLog->addError("return stmt fuori da una funzione");
+            return;
+        }
+
+        if(currentFunction->returnType == ValueType::Void && s->value != nullptr) {
+            errorLog->addError("returning a value in a function declared void");
+            return;
+        }
+
+        if(currentFunction->returnType != ValueType::Void && s->value == nullptr) {
+            errorLog->addError("return stmt with no value in a function returning non-void");
+            return;
+        }
+
+        if(s->value != nullptr) {
+            // controllo del tipo dell'espressione (return expr;)
+            ExprAnalysisResult res = analyzeExpr(s->value.get());
+
+            if(!isAssignmentCompatible(currentFunction->returnType, res.value_type)) {
+                errorLog->addError("could not convert " + toString(currentFunction->returnType) +
+                                   " to " + toString(res.value_type) + " in return");
+                return;
+            }
         }
     }
 
@@ -236,6 +314,31 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
         ExprAnalysisResult result;
         result.value_type = lookupSymbolInfo(s->name).type;
         return result;
+    }
+
+    // Function Call Expression
+    else if(auto s = dynamic_cast<const CallExpr*>(expr))
+    {
+        if(!functionTable.contains(s->name)) {
+            errorLog->addError(s->name + "was not declared in this scope");
+            return ExprAnalysisResult{ValueType::Error};
+        }
+
+        if(s->args.size() != functionTable[s->name].paramTypes.size()) {
+            errorLog->addError("errore #325 - callexpr in analyseExpr");
+            return ExprAnalysisResult{ValueType::Error};
+        }
+
+        for(int i=0; i < s->args.size(); ++i) {
+            auto res = analyzeExpr(s->args.at(i).get());
+
+            if(!isAssignmentCompatible(res.value_type, functionTable[s->name].paramTypes.at(i))) {//ordine parametri giusto??
+                errorLog->addError("error#332 - callexpr in analyze expr");
+                return ExprAnalysisResult{ValueType::Error};
+            }
+        }
+
+        return ExprAnalysisResult{functionTable[s->name].returnType};
     }
 
     // Binary Expression

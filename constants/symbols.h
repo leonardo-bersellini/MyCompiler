@@ -1,5 +1,5 @@
-#ifndef SYMBOL_H
-#define SYMBOL_H
+#ifndef SYMBOLS_H
+#define SYMBOLS_H
 
 #include <QString>
 
@@ -11,6 +11,7 @@ enum class ValueType {
     String,
     Char,
     Bool,
+    Void,
     Error
 };
 
@@ -28,6 +29,8 @@ inline QString toString(const ValueType& type) {
             break;
         case ValueType::Error: return "Error";
             break;
+        case ValueType::Void: return "Void";
+            break;
     }
     return "Unknown";
 }
@@ -38,6 +41,7 @@ inline ValueType toValueType(const QString& typeName) {
     if (typeName == "string") return ValueType::String;
     if (typeName == "char") return ValueType::Char;
     if (typeName == "bool") return ValueType::Bool;
+    if( typeName == "void") return ValueType::Void;
     return ValueType::Error;
 }
 
@@ -51,4 +55,14 @@ struct SymbolInfo {
     ValueType type;
 };
 
-#endif // SYMBOL_H
+/** FUNCTION INFO
+ *  Questa struttura permette di riassumere i dati delle funzioni, permettendo le analisi semantiche
+ *  in base alla tipologia dei dati.
+ */
+
+struct FunctionInfo {
+    ValueType returnType;
+    std::vector<ValueType> paramTypes;
+};
+
+#endif // SYMBOLS_H

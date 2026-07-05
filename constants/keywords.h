@@ -20,6 +20,8 @@ inline const QMap<QString, TokenType> keywords = {
     {"while", TokenType::WhileKeyword},
     {"break", TokenType::BreakKeyword},
     {"continue", TokenType::ContinueKeyword},
+    {"void", TokenType::VoidKeyword},
+    {"return", TokenType::ReturnKeyword},
 };
 
 #endif // KEYWORDS_H

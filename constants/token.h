@@ -23,6 +23,8 @@ enum class TokenType {
     ElifKeyword,
     ForKeyword,
     WhileKeyword,
+    ReturnKeyword,
+    VoidKeyword,
 
     BreakKeyword,
     ContinueKeyword,
@@ -52,6 +54,7 @@ enum class TokenType {
     RBrace,
 
     Semicolon,
+    Comma,
     EndOfFile,
     Unknown,
 };

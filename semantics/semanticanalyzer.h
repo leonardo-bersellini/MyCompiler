@@ -4,7 +4,7 @@
 #include <QMap>
 #include <QString>
 
-#include "symbol.h"
+#include "symbols.h"
 #include "AbstractSintaxTree.h"
 #include "errorlog.h"
 
@@ -21,7 +21,11 @@ public:
     void analyzeProgram(const Program& program, ErrorLog& errorLog);
 
 private:
-    QList<QMap<QString, SymbolInfo>> scopeStack; //permette una lista di scope diversi
+    QList<QMap<QString, SymbolInfo>> scopeStack; // Permette una lista di scope diversi, insieme di tabelle dei simboli
+
+    QMap<QString, FunctionInfo> functionTable;     // Tabella delle funzioni dichiarate
+    const FunctionInfo* currentFunction = nullptr; // Funzione corrente (se esiste)
+
     ErrorLog* errorLog;
 
     int loopDepth = 0; //contatore dell'anidamento dei cicli iterativi

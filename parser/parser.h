@@ -8,7 +8,7 @@
 #include "AbstractSintaxTree.h"
 #include "errorlog.h"
 
-#include "symbol.h"
+#include "symbols.h"
 
 class Parser
 {
@@ -37,6 +37,8 @@ private:
     std::unique_ptr<Stmt> parseScopeStmt();
     std::unique_ptr<Stmt> parseAssignStmt();
     std::unique_ptr<Stmt> parseDeclarationStmt();
+    std::unique_ptr<Stmt> parseFunctionStmt();
+    std::unique_ptr<Stmt> parseReturnStmt();
     std::unique_ptr<Stmt> parseIfStmt();
     std::unique_ptr<Stmt> parseForStmt();
     std::unique_ptr<Stmt> parseWhileStmt();

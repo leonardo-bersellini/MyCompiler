@@ -276,6 +276,9 @@ CMAKE_TAPI:FILEPATH=CMAKE_TAPI-NOTFOUND
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
+//The directory containing a CMake configuration file for LLVM.
+LLVM_DIR:PATH=LLVM_DIR-NOTFOUND
+
 //Value Computed by CMake
 MyCompiler_BINARY_DIR:STATIC=C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug
 

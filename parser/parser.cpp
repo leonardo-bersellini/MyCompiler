@@ -101,9 +101,18 @@ std::unique_ptr<Stmt> Parser::parseStatement()
     }
     else if(check(TokenType::TypeKeyword))
     {
-        //Dichiarazione
+        //Dichiarazione o Funzione
 
-        return parseDeclarationStmt();
+        if(peek(2).type == TokenType::LParen)
+            return parseFunctionStmt();
+        else
+            return parseDeclarationStmt();
+    }
+    else if(check(TokenType::ReturnKeyword))
+    {
+        // Return stmt
+
+        return parseReturnStmt();
     }
     else if(check(TokenType::IfKeyword))
     {
@@ -281,6 +290,68 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt()
         d->initializer = nullptr; //nessun initializer
         return d;
     }
+}
+
+/*
+ * Funzione di parsing degli stmt di tipo function.
+ * Questi stmt corrispondono alle dichiarazioni di una funzione,
+ * che accetta returntype, arguments e uno scope come body.
+ */
+
+std::unique_ptr<Stmt> Parser::parseFunctionStmt()
+{
+    ValueType returnType = toValueType(advance().lexeme); // consuma tipo di ritorno
+    QString identifier = advance().lexeme; // consuma nome funzione
+
+    expect(TokenType::LParen);
+
+    // --- parametri --- //
+    std::vector<FunctionParam> params;
+
+    while(!check(TokenType::RParen) && !isAtEnd())
+    {
+        ValueType paramType = toValueType(advance().lexeme); // consuma tipo parametro
+        QString paramName = advance().lexeme;                 // consuma nome parametro
+
+        params.push_back(FunctionParam{paramType, paramName});
+
+        if(check(TokenType::Comma))
+            advance(); // consuma ',' se c'è un altro parametro
+    }
+
+    expect(TokenType::RParen);
+
+    auto body = parseScopeStmt();
+
+    auto function = std::make_unique<FunctionStmt>();
+    function->name = identifier;
+    function->returnType = returnType;
+    function->params = std::move(params);
+    function->body = std::move(body);
+    return function;
+
+}
+
+/*
+ * Funzione di parsing degli stmt di return
+ */
+
+std::unique_ptr<Stmt> Parser::parseReturnStmt()
+{
+    advance(); //consuma 'return'
+
+    auto r = std::make_unique<ReturnStmt>();
+
+    if(check(TokenType::Semicolon)) {
+        //return senza valore
+        r->value = nullptr;
+        advance();
+    } else {
+        r->value = parseExpr();
+        advance(); //consuma ;
+    }
+
+    return r;
 }
 
 /*
@@ -627,6 +698,27 @@ std::unique_ptr<Expr> Parser::parseFactor()
         return boolExpr;
     }
 
+    // Chiamata a funzione
+    else if(check(TokenType::Identifier) && peek(1).type == TokenType::LParen)
+    {
+        auto call = std::make_unique<CallExpr>();
+
+        call->name = advance().lexeme;
+
+        std::vector<std::unique_ptr<Expr>> args;
+
+        while(!check(TokenType::RParen) && !isAtEnd())
+        {
+            args.push_back(parseExpr());
+
+            if(check(TokenType::Comma))
+                advance(); // consuma ',' se c'è un altro argomento
+        }
+
+        call->args = std::move(args);
+        return call;
+    }
+
     // Varibile
     else if(check(TokenType::Identifier))
     {
@@ -660,7 +752,8 @@ std::unique_ptr<Expr> Parser::parseFactor()
 
     // Errori di sintassi
     else {
-        errorLog->addError("Parse error. Expected a factor, received a different token", peek().position);
+        errorLog->addError("Parse error. Expected a factor, received a different token. token: " +
+                               typeToString(tokens.at(currentPos).type), peek().position);
         advance(); //error recovery, salta il token errato
         auto error = std::make_unique<ErrorExpr>();
         return error;

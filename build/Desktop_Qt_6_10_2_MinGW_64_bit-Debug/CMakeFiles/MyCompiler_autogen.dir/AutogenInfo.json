@@ -172,6 +172,11 @@
 		"C:/Qt/6.10.2/mingw_64/lib/cmake/Qt6/QtPublicWindowsHelpers.cmake",
 		"C:/Qt/Tools/CMake_64/share/cmake-3.30/Modules/CMakeFindDependencyMacro.cmake",
 		"C:/Qt/6.10.2/mingw_64/lib/cmake/Qt6/Qt6Dependencies.cmake",
+		"C:/llvm-install/lib/cmake/llvm/LLVMConfigVersion.cmake",
+		"C:/llvm-install/lib/cmake/llvm/LLVMConfig.cmake",
+		"C:/llvm-install/lib/cmake/llvm/LLVMExports.cmake",
+		"C:/llvm-install/lib/cmake/llvm/LLVMExports-release.cmake",
+		"C:/llvm-install/lib/cmake/llvm/LLVM-Config.cmake",
 		"C:/Qt/Tools/CMake_64/share/cmake-3.30/Modules/GNUInstallDirs.cmake"
 	],
 	"CMAKE_SOURCE_DIR" : "C:/Users/Utente/Desktop/Qt/MyCompiler",
@@ -193,9 +198,9 @@
 			null
 		],
 		[
-			"C:/Users/Utente/Desktop/Qt/MyCompiler/constants/symbol.h",
+			"C:/Users/Utente/Desktop/Qt/MyCompiler/constants/symbols.h",
 			"MU",
-			"GOPSSMKKXP/moc_symbol.cpp",
+			"GOPSSMKKXP/moc_symbols.cpp",
 			null
 		],
 		[
@@ -241,6 +246,7 @@
 		"WIN32",
 		"WIN64",
 		"_ENABLE_EXTENDED_ALIGNED_STORAGE",
+		"_FILE_OFFSET_BITS=64 -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS",
 		"_UNICODE",
 		"_WIN64"
 	],
@@ -255,6 +261,7 @@
 	[
 		"C:/Users/Utente/Desktop/Qt/MyCompiler/constants",
 		"C:/Users/Utente/Desktop/Qt/MyCompiler/errorlog",
+		"C:/llvm-install/include",
 		"C:/Qt/6.10.2/mingw_64/include/QtCore",
 		"C:/Qt/6.10.2/mingw_64/include",
 		"C:/Qt/6.10.2/mingw_64/mkspecs/win32-g++",

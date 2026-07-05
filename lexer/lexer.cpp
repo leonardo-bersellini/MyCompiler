@@ -26,6 +26,7 @@ QList<Token> Lexer::analiseString(const QString &string, ErrorLog &_errorLog)
     currentTextPos.line = 0;
 
     buffer.remove("\r");
+    buffer.remove("\t");
 
     while(!isAtEnd())
     {
@@ -180,12 +181,16 @@ QList<Token> Lexer::analiseString(const QString &string, ErrorLog &_errorLog)
             Token tsemi = createToken(TokenType::Semicolon);
             tokens.append(tsemi);
         }
+        else if(c == ',') {
+            Token t = createToken(TokenType::Comma);
+            tokens.append(t);
+        }
         else
         {
             Token unknown = createToken(TokenType::Unknown);
             tokens.append(unknown);
 
-            errorLog->addError("Carattere non riconosciuto", currentTextPos);
+            errorLog->addError(QString("Carattere non riconosciuto. char: ").append(c), currentTextPos);
         }
     }
 

@@ -702,6 +702,26 @@
 			"path" : "C:/Qt/6.10.2/mingw_64/lib/cmake/Qt6/Qt6Dependencies.cmake"
 		},
 		{
+			"isExternal" : true,
+			"path" : "C:/llvm-install/lib/cmake/llvm/LLVMConfigVersion.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/llvm-install/lib/cmake/llvm/LLVMConfig.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/llvm-install/lib/cmake/llvm/LLVMExports.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/llvm-install/lib/cmake/llvm/LLVMExports-release.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/llvm-install/lib/cmake/llvm/LLVM-Config.cmake"
+		},
+		{
 			"isCMake" : true,
 			"isExternal" : true,
 			"path" : "C:/Qt/Tools/CMake_64/share/cmake-3.30/Modules/GNUInstallDirs.cmake"
