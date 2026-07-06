@@ -272,7 +272,7 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt()
         expect(TokenType::Semicolon);
 
         auto d = std::make_unique<DeclarationStmt>();
-        d->type = toValueType(type); //QString -> ValueType
+        d->type = Type::toValueType(type); //QString -> ValueType
         d->name = name;
         d->initializer = std::move(initExpr);
         return d;
@@ -285,7 +285,7 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt()
         expect(TokenType::Semicolon);
 
         auto d = std::make_unique<DeclarationStmt>();
-        d->type = toValueType(type); //QString -> ValueType
+        d->type = Type::toValueType(type); //QString -> ValueType
         d->name = name;
         d->initializer = nullptr; //nessun initializer
         return d;
@@ -300,7 +300,7 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt()
 
 std::unique_ptr<Stmt> Parser::parseFunctionStmt()
 {
-    ValueType returnType = toValueType(advance().lexeme); // consuma tipo di ritorno
+    ValueType returnType = Type::toValueType(advance().lexeme); // consuma tipo di ritorno
     QString identifier = advance().lexeme; // consuma nome funzione
 
     expect(TokenType::LParen);
@@ -310,7 +310,7 @@ std::unique_ptr<Stmt> Parser::parseFunctionStmt()
 
     while(!check(TokenType::RParen) && !isAtEnd())
     {
-        ValueType paramType = toValueType(advance().lexeme); // consuma tipo parametro
+        ValueType paramType = Type::toValueType(advance().lexeme); // consuma tipo parametro
         QString paramName = advance().lexeme;                 // consuma nome parametro
 
         params.push_back(FunctionParam{paramType, paramName});

@@ -7,7 +7,7 @@
 				{
 					"build" : ".",
 					"hasInstallRule" : true,
-					"jsonFile" : "directory-.-Debug-d56e9e1249c2c67d4b7a.json",
+					"jsonFile" : "directory-.-Debug-d467eb469b3017525892.json",
 					"minimumCMakeVersion" : 
 					{
 						"string" : "3.16"
@@ -52,7 +52,7 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "MyCompiler::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-MyCompiler-Debug-d70841ffdd99fc024be1.json",
+					"jsonFile" : "target-MyCompiler-Debug-f427a90769350db33504.json",
 					"name" : "MyCompiler",
 					"projectIndex" : 0
 				},

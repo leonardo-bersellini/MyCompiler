@@ -107,10 +107,13 @@ MyCompiler_autogen/timestamp: \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/CMakeFiles/3.30.5/CMakeCXXCompiler.cmake \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/CMakeFiles/3.30.5/CMakeRCCompiler.cmake \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/CMakeFiles/3.30.5/CMakeSystem.cmake \
+	C:/Users/Utente/Desktop/Qt/MyCompiler/codegen/codegenerator.cpp \
+	C:/Users/Utente/Desktop/Qt/MyCompiler/codegen/codegenerator.h \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/constants/AbstractSintaxTree.h \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/constants/keywords.h \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/constants/symbols.h \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/constants/token.h \
+	C:/Users/Utente/Desktop/Qt/MyCompiler/constants/types.h \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/errorlog/errorlog.cpp \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/errorlog/errorlog.h \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/lexer/lexer.cpp \

@@ -25,6 +25,8 @@ add_executable(MyCompiler
   constants/symbols.h
   semantics/semanticanalyzer.h semantics/semanticanalyzer.cpp
   constants/keywords.h
+  codegen/codegenerator.cpp codegen/codegenerator.h
+  constants/types.h
 
 )
 target_link_libraries(MyCompiler PRIVATE Qt${QT_VERSION_MAJOR}::Core)

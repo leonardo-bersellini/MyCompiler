@@ -186,6 +186,12 @@
 	"HEADERS" : 
 	[
 		[
+			"C:/Users/Utente/Desktop/Qt/MyCompiler/codegen/codegenerator.h",
+			"MU",
+			"EW52EPVLKE/moc_codegenerator.cpp",
+			null
+		],
+		[
 			"C:/Users/Utente/Desktop/Qt/MyCompiler/constants/AbstractSintaxTree.h",
 			"MU",
 			"GOPSSMKKXP/moc_AbstractSintaxTree.cpp",
@@ -207,6 +213,12 @@
 			"C:/Users/Utente/Desktop/Qt/MyCompiler/constants/token.h",
 			"MU",
 			"GOPSSMKKXP/moc_token.cpp",
+			null
+		],
+		[
+			"C:/Users/Utente/Desktop/Qt/MyCompiler/constants/types.h",
+			"MU",
+			"GOPSSMKKXP/moc_types.cpp",
 			null
 		],
 		[
@@ -305,6 +317,11 @@
 	"SETTINGS_FILE" : "C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_Qt_6_10_2_MinGW_64_bit-Debug/CMakeFiles/MyCompiler_autogen.dir/AutogenUsed.txt",
 	"SOURCES" : 
 	[
+		[
+			"C:/Users/Utente/Desktop/Qt/MyCompiler/codegen/codegenerator.cpp",
+			"MU",
+			null
+		],
 		[
 			"C:/Users/Utente/Desktop/Qt/MyCompiler/errorlog/errorlog.cpp",
 			"MU",

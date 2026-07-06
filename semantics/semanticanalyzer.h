@@ -30,15 +30,10 @@ private:
 
     int loopDepth = 0; //contatore dell'anidamento dei cicli iterativi
 
-
-    bool isAssignmentCompatible(ValueType variableType, ValueType assignType);
-
     void analyzeStmt(const Stmt* stmt);
     ExprAnalysisResult analyzeExpr(const Expr* expr);
 
     ExprAnalysisResult analyzeBinaryOperation(const BinaryExpr* expr);
-    bool isNumeric(ValueType t);
-
 
     bool symbolExistsAnywhere(const QString& name) const;
     bool symbolExistsInCurrentScope(const QString& name) const;

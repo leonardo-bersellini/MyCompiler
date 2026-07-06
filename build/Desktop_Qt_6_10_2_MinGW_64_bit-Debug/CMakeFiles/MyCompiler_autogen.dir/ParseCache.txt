@@ -15,3 +15,5 @@ C:/Users/Utente/Desktop/Qt/MyCompiler/lexer/lexer.cpp
 C:/Users/Utente/Desktop/Qt/MyCompiler/main.cpp
 C:/Users/Utente/Desktop/Qt/MyCompiler/parser/parser.cpp
 C:/Users/Utente/Desktop/Qt/MyCompiler/constants/symbols.h
+C:/Users/Utente/Desktop/Qt/MyCompiler/constants/Types.h
+C:/Users/Utente/Desktop/Qt/MyCompiler/constants/types.h

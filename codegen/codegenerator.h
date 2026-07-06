@@ -24,10 +24,16 @@ private:
     llvm::LLVMContext Context;                              // Contesto llvm incluso dalle funzioni
     llvm::IRBuilder<> Builder;                              // Genera l'IR llvm
     std::unique_ptr<llvm::Module> Module;                   // Contenitore del codice generato
-    std::map<std::string, llvm::AllocaInst*> symbolTable;
+    QMap<QString, llvm::AllocaInst*> symbolTable;
 
-    llvm::Value* generateExpr(const Expr* expr);
     void generateStmt(const Stmt* stmt);
+    llvm::Value* generateExpr(const Expr* expr);
+
+    llvm::Type* getLLVMType(const ValueType &type);
+    llvm::AllocaInst* createEntryAlloca(llvm::Function* func, const std::string& name, llvm::Type* type);
+
+    llvm::Value* promote(llvm::Value*, ValueType from, ValueType to);
+
 };
 
 #endif // CODEGENERATOR_H

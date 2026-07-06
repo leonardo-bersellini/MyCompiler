@@ -5,25 +5,6 @@ SemanticAnalyzer::SemanticAnalyzer()
 }
 
 /*
- * Questa funzione controlla se un'operazione di assegnazione è fattibile in base ai tipi degli
- * operandi.
- * I due parametri rappresentano il tipo della variabile a cui si assegna il valore (variableType) ed
- * il tipo del valore che si sta assegnando (assignType).
- * es: int x = 5.0; (variableType è int mentre assignType è double).
- */
-
-bool SemanticAnalyzer::isAssignmentCompatible(ValueType variableType, ValueType assignType) {
-    if (assignType == ValueType::Error) return true;  // errore già segnalato altrove, non duplicare
-
-    if (variableType == assignType) return true;
-
-    // promozione Int -> Double
-    if (variableType == ValueType::Double && assignType == ValueType::Int) return true;
-
-    return false;
-}
-
-/*
  * Punto di ingresso dell'analisi semantica del programma.
  * Itera su ogni statement del programma in questione, richiamando un'analisi su ognuno di essi.
  * Alla fine delle chiamate di funzioni di analisi, tutti gli errori sono stati elaborati.
@@ -39,14 +20,24 @@ void SemanticAnalyzer::analyzeProgram(const Program &program, ErrorLog &errorLog
 
     this->scopeStack.append(QMap<QString, SymbolInfo>()); //scope globale
 
-    for(const auto& s : program.statements) {
-        analyzeStmt(s.get());
+    for(const auto& st : program.statements) {
+        analyzeStmt(st.get());
+    }
+/*
+    for(const std::unique_ptr<Stmt>& st : program.statements) {
+        if(!dynamic_cast<const DeclarationStmt*>(st.get()) &&
+            !dynamic_cast<const FunctionStmt*>(st.get()))
+        {
+            this->errorLog->addError("statement invalido come esterno ad una funzione");
+        }
     }
 
-    qDebug() << "FUNCTION TABLE:";
-    for(const auto& [key, a] : this->functionTable.asKeyValueRange()) {
-        qDebug() << key;
-    }
+    ELSE -> in ogni caso di analyzestmt, es assignment stmt:
+        if(currentFunction == nullptr) {
+            errorLog->addError("assegnazione invalida esterna ad una funzione");
+        }
+    più debole come strategia ma con messaggi di errore utili e più controllo sulla casistica.
+*/
 }
 
 /*
@@ -80,9 +71,9 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
             /* Controllo di tipo nell'operatore di assegnazione */
             ValueType varType = lookupSymbolInfo(s->name).type;
 
-            if (!isAssignmentCompatible(varType, valueResult.value_type)) {
+            if (!Type::isAssignmentCompatible(varType, valueResult.value_type)) {
                 errorLog->addError("tipo incompatibile nell'assegnazione a " + s->name + "  " +
-                                   "[confronto tra " + toString(varType) + " e " + toString(valueResult.value_type) + "]");
+                                   "[confronto tra " + Type::toString(varType) + " e " + Type::toString(valueResult.value_type) + "]");
             }
         }
         else {
@@ -109,9 +100,9 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
                 return;
             }
 
-            if (!isAssignmentCompatible(s->type, initResult.value_type)) {
+            if (!Type::isAssignmentCompatible(s->type, initResult.value_type)) {
                 errorLog->addError("tipo incompatibile nell'inizializzazione di " + s->name + "  " +
-                                   "[confronto tra " + toString(s->type) + " e " + toString(initResult.value_type) + "]");
+                                   "[confronto tra " + Type::toString(s->type) + " e " + Type::toString(initResult.value_type) + "]");
             }
         }
 
@@ -180,9 +171,9 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
             // controllo del tipo dell'espressione (return expr;)
             ExprAnalysisResult res = analyzeExpr(s->value.get());
 
-            if(!isAssignmentCompatible(currentFunction->returnType, res.value_type)) {
-                errorLog->addError("could not convert " + toString(currentFunction->returnType) +
-                                   " to " + toString(res.value_type) + " in return");
+            if(!Type::isAssignmentCompatible(currentFunction->returnType, res.value_type)) {
+                errorLog->addError("could not convert " + Type::toString(currentFunction->returnType) +
+                                   " to " + Type::toString(res.value_type) + " in return");
                 return;
             }
         }
@@ -310,6 +301,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     {
         if(!symbolExistsAnywhere(s->name)) {
             errorLog->addError("variable not defined. variable name: " + s->name);
+            return ExprAnalysisResult{ValueType::Error};
         }
         ExprAnalysisResult result;
         result.value_type = lookupSymbolInfo(s->name).type;
@@ -332,7 +324,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
         for(int i=0; i < s->args.size(); ++i) {
             auto res = analyzeExpr(s->args.at(i).get());
 
-            if(!isAssignmentCompatible(res.value_type, functionTable[s->name].paramTypes.at(i))) {//ordine parametri giusto??
+            if(!Type::isAssignmentCompatible(functionTable[s->name].paramTypes.at(i), res.value_type)) {//ordine parametri giusto??
                 errorLog->addError("error#332 - callexpr in analyze expr");
                 return ExprAnalysisResult{ValueType::Error};
             }
@@ -351,7 +343,14 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     else if(auto s = dynamic_cast<const UnaryExpr*>(expr))
     {
         //recursive call
-        return analyzeExpr(s->operand.get());
+        ExprAnalysisResult operandResult = analyzeExpr(s->operand.get());
+
+        ValueType resultType = Type::unaryResultType(s->op, operandResult.value_type);
+
+        if (resultType == ValueType::Error && operandResult.value_type != ValueType::Error) {
+            errorLog->addError("operatore unario non valido per il tipo " +
+                               Type::toString(operandResult.value_type));
+        }
     }
 
     // Error Expression
@@ -366,13 +365,6 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
 }
 
 /*
- * Controllo bool del tipo di un'espressione
- */
-bool SemanticAnalyzer::isNumeric(ValueType t) {
-    return t == ValueType::Int || t == ValueType::Double;
-}
-
-/*
  * Gli operatori binari devono controllare il tipo dei due operandi
  * prima di eseguire l'operazione, ogni operatore accetta tipi di operandi diversi.
  * Alcuni operatori permettono conversioni implicite del tipo di ritorno per permettere
@@ -381,97 +373,19 @@ bool SemanticAnalyzer::isNumeric(ValueType t) {
 
 ExprAnalysisResult SemanticAnalyzer::analyzeBinaryOperation(const BinaryExpr *expr)
 {
-    ExprAnalysisResult result;
-
-    // Controllo dei tipi degli operandi
     ValueType leftType = analyzeExpr(expr->left.get()).value_type;
     ValueType rightType = analyzeExpr(expr->right.get()).value_type;
 
-    bool leftIsTextual = (leftType == ValueType::String || leftType == ValueType::Char);
-    bool rightIsTextual = (rightType == ValueType::String || rightType == ValueType::Char);
+    ValueType resultType = Type::binaryResultType(expr->op, leftType, rightType);
 
-    bool bothNumeric = isNumeric(leftType) && isNumeric(rightType);
-    bool bothChar = (leftType == ValueType::Char && rightType == ValueType::Char);
-    bool bothString = (leftType == ValueType::String && rightType == ValueType::String);
+    if(resultType == ValueType::Error) {
+        errorLog->addError("operazione non valida tra tipi " +
+                Type::toString(leftType) + " e " + Type::toString(rightType));
 
-    //se si trova un errore l'espressione viene scartata come errore
-    if(leftType == ValueType::Error || rightType == ValueType::Error) {
-        result.value_type = ValueType::Error;
-        return result;
+        return ExprAnalysisResult{ValueType::Error};
     }
 
-    /* Controllo dei tipi di ritorno */
-
-    // Uguaglianza / Disuguaglianza : operatori [ ==, != ]
-    if (expr->op == TokenType::EqualEqual || expr->op == TokenType::NotEqual)
-    {
-        if (bothNumeric || bothChar || bothString) {
-            result.value_type = ValueType::Bool;
-        } else {
-            errorLog->addError("operatore di uguaglianza non valido tra tipi " + toString(leftType) + " e " + toString(rightType));
-            result.value_type = ValueType::Error;
-        }
-    }
-
-    // Confronti Relazionali : operatori [ >, <, >=, <= ]
-    else if (expr->op == TokenType::Less || expr->op == TokenType::Greater ||
-             expr->op == TokenType::LessEqual || expr->op == TokenType::GreaterEqual)
-    {
-        if (bothNumeric || bothChar || bothString) {
-            result.value_type = ValueType::Bool;
-        } else {
-            errorLog->addError("operatore di confronto non valido tra tipi " + toString(leftType) + " e " + toString(rightType));
-            result.value_type = ValueType::Error;
-        }
-    }
-
-    // Operatori Logici : operatori [ &&, !, || ]
-    else if (expr->op == TokenType::LogicalAnd || expr->op == TokenType::LogicalOr)
-    {
-        if (leftType == ValueType::Bool && rightType == ValueType::Bool) {
-            result.value_type = ValueType::Bool;
-        } else {
-            errorLog->addError("operatore logico non valido tra tipi " + toString(leftType) + " e " + toString(rightType));
-            result.value_type = ValueType::Error;
-        }
-    }
-
-    // Somma Aritmetica : operatore [ + ]
-    else if(expr->op == TokenType::Plus)
-    {
-        if (isNumeric(leftType) && isNumeric(rightType))
-        {
-            if (leftType == ValueType::Double || rightType == ValueType::Double)
-                result.value_type = ValueType::Double;  // promozione se almeno uno è Double
-            else
-                result.value_type = ValueType::Int;     // entrambi Int
-        }
-        else if (leftIsTextual && rightIsTextual) {
-            result.value_type = ValueType::String;  // concatenazione, sempre risultato string anche se input erano char
-        }
-        else {
-            errorLog->addError("operatore + non valido tra tipi " + toString(leftType) + " e " + toString(rightType));
-            result.value_type = ValueType::Error;
-        }
-    }
-
-    // Minus, Star, Slash : operatori [ -, *, / ]
-    else
-    {
-        if (isNumeric(leftType) && isNumeric(rightType))
-        {
-            if (leftType == ValueType::Double || rightType == ValueType::Double)
-                result.value_type = ValueType::Double;  // promozione se almeno uno è Double
-            else
-                result.value_type = ValueType::Int;     // entrambi Int
-        }
-        else {
-            errorLog->addError("operatore aritmetico non valido tra tipi " + toString(leftType) + " e " + toString(rightType));
-            result.value_type = ValueType::Error;
-        }
-    }
-
-    return result;
+    return ExprAnalysisResult{resultType};
 }
 
 /*
