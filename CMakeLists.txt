@@ -29,7 +29,7 @@ add_executable(MyCompiler
   constants/types.h
 
 )
-target_link_libraries(MyCompiler PRIVATE Qt${QT_VERSION_MAJOR}::Core)
+target_link_libraries(MyCompiler PRIVATE Qt${QT_VERSION_MAJOR}::Core ${LLVM_LIBS})
 
 target_include_directories(MyCompiler PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/constants
@@ -43,6 +43,13 @@ llvm_map_components_to_libnames(LLVM_LIBS
     Core
     Support
     IRReader
+    Target
+    MC
+    CodeGen
+    X86CodeGen
+    X86Desc
+    X86Info
+    X86AsmParser
 )
 
 target_link_libraries(MyCompiler PRIVATE ${LLVM_LIBS})

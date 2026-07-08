@@ -23,7 +23,15 @@ void SemanticAnalyzer::analyzeProgram(const Program &program, ErrorLog &errorLog
     for(const auto& st : program.statements) {
         analyzeStmt(st.get());
     }
+
+    //placeholder
+    for(const std::unique_ptr<Stmt>& st : program.statements) {
+        if(!dynamic_cast<const FunctionStmt*>(st.get())) {
+            this->errorLog->addError("presenza di stmt fuori da una funzione [alert placeholder]");
+        }
+    }
 /*
+ *  TODO !
     for(const std::unique_ptr<Stmt>& st : program.statements) {
         if(!dynamic_cast<const DeclarationStmt*>(st.get()) &&
             !dynamic_cast<const FunctionStmt*>(st.get()))
@@ -351,6 +359,8 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
             errorLog->addError("operatore unario non valido per il tipo " +
                                Type::toString(operandResult.value_type));
         }
+
+        return ExprAnalysisResult{resultType};
     }
 
     // Error Expression

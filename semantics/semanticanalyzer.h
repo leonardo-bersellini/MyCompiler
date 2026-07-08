@@ -8,6 +8,7 @@
 #include "AbstractSintaxTree.h"
 #include "errorlog.h"
 
+// struttura di ritorno dell'analisi delle espressioni, racchiude i dati di analisi
 struct ExprAnalysisResult {
     ValueType value_type;
     // futuro: bool isConstant; std::optional<double> constantValue; ecc.

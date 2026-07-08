@@ -9,20 +9,18 @@
 #include "semantics/semanticanalyzer.h"
 #include "errorlog.h"
 
-/*
-     * Language Structure
-     */
+#include "codegen/codegenerator.h"
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication a(argc, argv);
-
     Lexer lexer;
     Parser parser;
     SemanticAnalyzer analyzer;
     ErrorLog log;
 
     QString program_string; //contenuto del file programma
+
+    // STRING_GET, FILE
 
     QString filepath = argv[1];
     if(filepath.isEmpty()) {
@@ -38,13 +36,16 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    // STRING ELABORATION TO PROGRAM
+
     program_string = QString::fromUtf8(file.readAll().constData());
-    qDebug() << "text:" << program_string;
+    std::cout << "\nText:" << program_string.toStdString() << std::endl;
 
     auto tokens = lexer.analiseString(program_string, log);
     auto program = parser.parseProgram(tokens, log);
     analyzer.analyzeProgram(*program.get(), log);
 
+    std::cout << "\nProgram statements:\n" << std::endl;
     for (const auto& stmt : program->statements) {
         printStmt(stmt.get());
     }
@@ -52,9 +53,15 @@ int main(int argc, char *argv[])
     if (log.hasErrors()) {
         log.printErrors();
     } else {
-        qDebug() << "no errors found";
+        std::cout << "\nNo errors found\n" << std::endl;
+        std::cout << "Building obj target...\n" << std::endl;
+
+        CodeGenerator codegen;
+        codegen.generate(*program.get());
+        codegen.emitIR();
+        codegen.buildTarget();
     }
     log.clear();
 
-    return QCoreApplication::exec();
+    return 0;
 }

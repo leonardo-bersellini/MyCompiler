@@ -1,6 +1,6 @@
 #include "lexer.h"
 
-#include <QDebug>
+#include <iostream>
 
 #include "keywords.h"
 
@@ -199,8 +199,9 @@ QList<Token> Lexer::analiseString(const QString &string, ErrorLog &_errorLog)
     eof.position = currentTextPos;
     tokens.append(eof);
 
+    std::cout << "\nProgram Tokens:\n" << std::endl;
     for(Token& t : tokens){
-        qDebug() << typeToString(t.type);
+        std::cout << typeToString(t.type).toStdString() << std::endl;
     }
 
     return tokens;

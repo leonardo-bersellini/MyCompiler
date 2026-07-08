@@ -36,11 +36,9 @@ namespace Type
     inline ValueType logicalResultType(ValueType left, ValueType right);
     inline ValueType binaryResultType(TokenType _operator, ValueType left, ValueType right);
     inline ValueType unaryResultType(TokenType _operator, ValueType left);
+    inline ValueType promotionType(ValueType first, ValueType second);
     inline QString toString(const ValueType& type);
     inline ValueType toValueType(const QString& typeName);
-
-    // TODO aggiungere funzione promotionType(left,right) che dice come promuovere due tipi (es: int + double -> double)
-    // usarla nel codegen per sapere come utilizzare le informazioni delle regole dei tipi
 
     // TODO aggiungere commenti alla sezione Type
 }
@@ -167,9 +165,6 @@ ValueType Type::logicalResultType(ValueType left, ValueType right)
            : ValueType::Error;
 }
 
-/*
- */
-
 ValueType Type::binaryResultType(TokenType _operator, ValueType left, ValueType right)
 {
     if (left == ValueType::Error || right == ValueType::Error)
@@ -242,6 +237,21 @@ ValueType Type::unaryResultType(TokenType _operator, ValueType left)
         default:
             return ValueType::Error;
     }
+}
+
+ValueType Type::promotionType(ValueType first, ValueType second)
+{
+    if (first == ValueType::Error || second == ValueType::Error)
+        return ValueType::Error;
+
+    if (first == second)
+        return first;
+
+    // int + double = double
+    if (isNumeric(first) && isNumeric(second))
+        return ValueType::Double;
+
+    return ValueType::Error;
 }
 
 QString Type::toString(const ValueType& type) {

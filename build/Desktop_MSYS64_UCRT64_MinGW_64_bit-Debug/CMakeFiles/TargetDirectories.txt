@@ -1,0 +1,13 @@
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_MSYS64_UCRT64_MinGW_64_bit-Debug/CMakeFiles/intrinsics_gen.dir
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_MSYS64_UCRT64_MinGW_64_bit-Debug/CMakeFiles/omp_gen.dir
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_MSYS64_UCRT64_MinGW_64_bit-Debug/CMakeFiles/acc_gen.dir
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_MSYS64_UCRT64_MinGW_64_bit-Debug/CMakeFiles/RISCVTargetParserTableGen.dir
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_MSYS64_UCRT64_MinGW_64_bit-Debug/CMakeFiles/MyCompiler.dir
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_MSYS64_UCRT64_MinGW_64_bit-Debug/CMakeFiles/edit_cache.dir
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_MSYS64_UCRT64_MinGW_64_bit-Debug/CMakeFiles/rebuild_cache.dir
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_MSYS64_UCRT64_MinGW_64_bit-Debug/CMakeFiles/list_install_components.dir
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_MSYS64_UCRT64_MinGW_64_bit-Debug/CMakeFiles/install.dir
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_MSYS64_UCRT64_MinGW_64_bit-Debug/CMakeFiles/install/local.dir
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_MSYS64_UCRT64_MinGW_64_bit-Debug/CMakeFiles/install/strip.dir
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_MSYS64_UCRT64_MinGW_64_bit-Debug/CMakeFiles/MyCompiler_autogen_timestamp_deps.dir
+C:/Users/Utente/Desktop/Qt/MyCompiler/build/Desktop_MSYS64_UCRT64_MinGW_64_bit-Debug/CMakeFiles/MyCompiler_autogen.dir
