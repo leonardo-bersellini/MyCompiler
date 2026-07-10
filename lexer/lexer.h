@@ -14,7 +14,10 @@ public:
 
     QList<Token> analiseString(const QString& string, ErrorLog& _errorLog);
 
+    void printTokens();
+
 private:
+    QList<Token> m_tokens;
     QString buffer;
     int indexPos;
     TextPosition currentTextPos;

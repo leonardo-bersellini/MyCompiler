@@ -119,6 +119,38 @@ inline QString typeToString(TokenType type) {
         break;
     case TokenType::ContinueKeyword: typeStr = "ContinueKeyword";
         break;
+    case TokenType::WhileKeyword: typeStr = "WhileKeyword";
+        break;
+    case TokenType::ReturnKeyword: typeStr = "ReturnKeyword";
+        break;
+    case TokenType::VoidKeyword: typeStr = "VoidKeyword";
+        break;
+    case TokenType::EqualEqual: typeStr = "EqualEqual";
+        break;
+    case TokenType::NotEqual: typeStr = "NotEqual";
+        break;
+    case TokenType::Less: typeStr = "Less";
+        break;
+    case TokenType::LessEqual: typeStr = "LessEqual";
+        break;
+    case TokenType::Greater: typeStr = "Greater";
+        break;
+    case TokenType::GreaterEqual: typeStr = "GreaterEqual";
+        break;
+    case TokenType::LogicalNot: typeStr = "LogicalNot";
+        break;
+    case TokenType::LBracket: typeStr = "LBracket";
+        break;
+    case TokenType::RBracket: typeStr = "RBracket";
+        break;
+    case TokenType::LBrace: typeStr = "LBrace";
+        break;
+    case TokenType::RBrace: typeStr = "RBrace";
+        break;
+    case TokenType::Comma: typeStr = "Comma";
+        break;
+
+    Q_UNREACHABLE();
     }
     return typeStr;
 }

@@ -117,6 +117,10 @@ MyCompiler_autogen/timestamp: \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/constants/symbols.h \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/constants/token.h \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/constants/types.h \
+	C:/Users/Utente/Desktop/Qt/MyCompiler/driver/compilerdriver.cpp \
+	C:/Users/Utente/Desktop/Qt/MyCompiler/driver/compilerdriver.h \
+	C:/Users/Utente/Desktop/Qt/MyCompiler/driver/flags.h \
+	C:/Users/Utente/Desktop/Qt/MyCompiler/driver/options.h \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/errorlog/errorlog.cpp \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/errorlog/errorlog.h \
 	C:/Users/Utente/Desktop/Qt/MyCompiler/lexer/lexer.cpp \

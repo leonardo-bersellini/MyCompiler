@@ -17,7 +17,7 @@ QList<Token> Lexer::analiseString(const QString &string, ErrorLog &_errorLog)
 {
     this->errorLog = &_errorLog;
 
-    QList<Token> tokens;
+    m_tokens.clear();
 
     buffer = string;
 
@@ -41,30 +41,30 @@ QList<Token> Lexer::analiseString(const QString &string, ErrorLog &_errorLog)
         else if(c.isDigit())
         {
             Token num = scanNumber();
-            tokens.append(num);
+            m_tokens.append(num);
         }
         else if(c.isLetter())
         {
             Token identifier = scanIdentifier();
-            tokens.append(identifier);
+            m_tokens.append(identifier);
         }
         else if(c == '"')
         {
             Token str = scanString();
-            tokens.append(str);
+            m_tokens.append(str);
         }
         else if(c == '\'')
         {
             Token ch = scanChar();
-            tokens.append(ch);
+            m_tokens.append(ch);
         }
         else if(c == '+') {
             Token tplus = createToken(TokenType::Plus);
-            tokens.append(tplus);
+            m_tokens.append(tplus);
         }
         else if(c == '-') {
             Token tmin = createToken(TokenType::Minus);
-            tokens.append(tmin);
+            m_tokens.append(tmin);
         }
         else if(c == '/')
         {
@@ -88,38 +88,38 @@ QList<Token> Lexer::analiseString(const QString &string, ErrorLog &_errorLog)
                 }
             } else {
                 Token tdiv = createToken(TokenType::Slash);
-                tokens.append(tdiv);
+                m_tokens.append(tdiv);
             }
         }
         else if(c == '*') {
             Token tstar = createToken(TokenType::Star);
-            tokens.append(tstar);
+            m_tokens.append(tstar);
         }
         else if(c == '=') {
             if(peek(1) == '=') {
                 Token t = createToken(TokenType::EqualEqual);
                 t.lexeme.append(advance());
-                tokens.append(t);
+                m_tokens.append(t);
             } else {
                 Token t = createToken(TokenType::Equal);
-                tokens.append(t);
+                m_tokens.append(t);
             }
         }
         else if(c == '!') {
             if(peek(1) == '=') {
                 Token t = createToken((TokenType::NotEqual));
                 t.lexeme.append(advance());
-                tokens.append(t);
+                m_tokens.append(t);
             } else {
                 Token t = createToken(TokenType::LogicalNot);
-                tokens.append(t);
+                m_tokens.append(t);
             }
         }
         else if(c == '&') {
             if(peek(1) == '&') {
                 Token t = createToken(TokenType::LogicalAnd);
                 t.lexeme.append(advance());
-                tokens.append(t);
+                m_tokens.append(t);
             } else {
                 //gestione &
             }
@@ -128,7 +128,7 @@ QList<Token> Lexer::analiseString(const QString &string, ErrorLog &_errorLog)
             if(peek(1) == '|') {
                 Token t = createToken(TokenType::LogicalOr);
                 t.lexeme.append(advance());
-                tokens.append(t);
+                m_tokens.append(t);
             } else {
                 //gestione |
             }
@@ -137,58 +137,58 @@ QList<Token> Lexer::analiseString(const QString &string, ErrorLog &_errorLog)
             if(peek(1) == '=') {
                 Token t = createToken(TokenType::GreaterEqual);
                 t.lexeme.append(advance());
-                tokens.append(t);
+                m_tokens.append(t);
             } else {
                 Token t = createToken(TokenType::Greater);
-                tokens.append(t);
+                m_tokens.append(t);
             }
         }
         else if(c == '<') {
             if(peek(1) == '=') {
                 Token t = createToken(TokenType::LessEqual);
                 t.lexeme.append(advance());
-                tokens.append(t);
+                m_tokens.append(t);
             } else {
                 Token t = createToken(TokenType::Less);
-                tokens.append(t);
+                m_tokens.append(t);
             }
         }
         else if(c == '(') {
             Token tlparen = createToken(TokenType::LParen);
-            tokens.append(tlparen);
+            m_tokens.append(tlparen);
         }
         else if(c == ')') {
             Token trparen = createToken(TokenType::RParen);
-            tokens.append(trparen);
+            m_tokens.append(trparen);
         }
         else if(c == '[') {
             Token tlbracket = createToken(TokenType::LBracket);
-            tokens.append(tlbracket);
+            m_tokens.append(tlbracket);
         }
         else if(c == ']') {
             Token trbracket = createToken(TokenType::RBracket);
-            tokens.append(trbracket);
+            m_tokens.append(trbracket);
         }
         else if(c == '{') {
             Token tlbrace = createToken(TokenType::LBrace);
-            tokens.append(tlbrace);
+            m_tokens.append(tlbrace);
         }
         else if(c == '}') {
             Token trbrace = createToken(TokenType::RBrace);
-            tokens.append(trbrace);
+            m_tokens.append(trbrace);
         }
         else if(c == ';') {
             Token tsemi = createToken(TokenType::Semicolon);
-            tokens.append(tsemi);
+            m_tokens.append(tsemi);
         }
         else if(c == ',') {
             Token t = createToken(TokenType::Comma);
-            tokens.append(t);
+            m_tokens.append(t);
         }
         else
         {
             Token unknown = createToken(TokenType::Unknown);
-            tokens.append(unknown);
+            m_tokens.append(unknown);
 
             errorLog->addError(QString("Carattere non riconosciuto. char: ").append(c), currentTextPos);
         }
@@ -197,14 +197,21 @@ QList<Token> Lexer::analiseString(const QString &string, ErrorLog &_errorLog)
     Token eof;
     eof.type = TokenType::EndOfFile;
     eof.position = currentTextPos;
-    tokens.append(eof);
+    m_tokens.append(eof);
 
+    return m_tokens;
+}
+
+/*
+ * Emette i tokens raccolti in output a console
+ */
+
+void Lexer::printTokens()
+{
     std::cout << "\nProgram Tokens:\n" << std::endl;
-    for(Token& t : tokens){
+    for(Token& t : m_tokens){
         std::cout << typeToString(t.type).toStdString() << std::endl;
     }
-
-    return tokens;
 }
 
 /*

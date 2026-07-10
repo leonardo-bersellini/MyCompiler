@@ -1,0 +1,54 @@
+#ifndef FLAGS_H
+#define FLAGS_H
+
+#include <QString>
+#include <vector>
+
+#include "options.h"
+
+/**
+ * FLAG DI TIPO 1: PIPELINE FLAG
+ * Sintassi: -<flagname>
+ * Queste flag indicano al compiler DOVE fermare il processo di esecuzione oppure
+ * quale metodo di compilazione usare. (per esempio per fermare la compilazione ad uno
+ * step intermedio).
+ * Per stuttura queste flag possono portarsi un valore che modifichi le opzioni di compilazione.
+ *
+ * Nota: i nomi di questi flag devono essere di lunghezza pari a 1
+ */
+
+struct PipelineFlag {
+    QString name;
+    bool requiresValue;
+    QString description;
+    OutputKind resultingKind;
+    QString CompilerOptions::* valueTarget; //nullptr se non serve un valore
+};
+
+inline const std::vector<PipelineFlag> pipelineFlags = {
+    { "o", true, "Compile and assemble, but do not link (produces .o)", OutputKind::ObjectFile, &CompilerOptions::outputFile},
+};
+
+/**
+ * FLAG DI TIPO 2: UTILITY FLAG
+ * Sintassi: --<flagname>
+ * Questo gruppo di flag, come detto dal nome, servono come utility per l'utente da cli.
+ * Il loro scopo è indicare al compiler COME arrivare alla destinazione selezionata, ad esempio
+ * specificando che tipo di output mostrare a terminale o se indicare tutti i passaggi in ouput.
+ *
+ * Nota: i nomi di questi flag devono essere di lunghezza superiore a 1 (meglio se superiore a 3-4).
+ */
+
+struct UtilityFlag {
+    QString name;
+    QString description;
+    bool CompilerOptions::* target;
+};
+
+inline const std::vector<UtilityFlag> utilityFlags = {
+    { "llvm-ir", "Print generated LLVM IR to stdout", &CompilerOptions::emitIR },
+    { "verbose", "Show detailed information during the execution.", &CompilerOptions::verbose},
+};
+
+
+#endif // FLAGS_H

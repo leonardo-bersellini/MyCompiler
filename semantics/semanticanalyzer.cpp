@@ -332,7 +332,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
         for(int i=0; i < s->args.size(); ++i) {
             auto res = analyzeExpr(s->args.at(i).get());
 
-            if(!Type::isAssignmentCompatible(functionTable[s->name].paramTypes.at(i), res.value_type)) {//ordine parametri giusto??
+            if(!Type::isAssignmentCompatible(functionTable[s->name].paramTypes.at(i), res.value_type)) {
                 errorLog->addError("error#332 - callexpr in analyze expr");
                 return ExprAnalysisResult{ValueType::Error};
             }

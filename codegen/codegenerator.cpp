@@ -21,6 +21,11 @@ CodeGenerator::CodeGenerator()
     Module = std::make_unique<llvm::Module>("mycompiler_module", Context);
 }
 
+/*
+ * Questa funzione si occupa di emettere, ovvero stampare in output, gli statement llvm ir
+ * accumulati nel modulo, ovvero il programma convertito in llvm ir code.
+ */
+
 void CodeGenerator::emitIR()
 {
     std::cout << "\nIR [llvm-generated]:" << std::endl;
@@ -28,7 +33,15 @@ void CodeGenerator::emitIR()
     //qDebug() << llvm::verifyModule(*Module, &llvm::errs());
 }
 
-void CodeGenerator::buildTarget()
+/*
+ * Questa funzione si occupa di costruire un target e compilare il vero codice obj,
+ * partendo dal codice IR di llvm.
+ * Le funzioni utilizzate sono chiamatedi basso livello llvm che si occupano di inizializzare e
+ * richiamare correttamente il sistea operativo per cui si genera il codice.
+ * Questo codice llvm verrà compilato per un'architettura Windows.
+ */
+
+void CodeGenerator::buildTargetObj(const QString& target_path)
 {
     //INIT TARGET
     llvm::InitializeNativeTarget();
@@ -67,7 +80,7 @@ void CodeGenerator::buildTarget()
     //CREAZIONE FILE OBJ
     std::error_code EC;
 
-    llvm::raw_fd_ostream dest("code.obj", EC, llvm::sys::fs::OF_None);
+    llvm::raw_fd_ostream dest(target_path.toStdString(), EC, llvm::sys::fs::OF_None);
     if (EC) {
         qDebug() << "Errore apertura file:" << QString::fromStdString(EC.message());
         return;
@@ -118,7 +131,8 @@ llvm::Type* CodeGenerator::getLLVMType(const ValueType &type)
 }
 
 /*
- * Inversa di getLLVMType
+ * Inversa di getLLVMType, permette di convertire i tipi di llvm in tipi
+ * dell'enumerazione standard del nostro ast.
  */
 
 ValueType CodeGenerator::getValueType(llvm::Type *type)
@@ -143,7 +157,12 @@ ValueType CodeGenerator::getValueType(llvm::Type *type)
 }
 
 /*
- * Funzione che applica le conversioni implicite
+ * Funzione che applica le conversioni implicite di tipo ai valori.
+ * Questa funzione applica in automatico le conversioni fisiche di valore tramite api llvm,
+ * ai values (llvm::Value*) di llvm.
+ *
+ * Nota: E' di estrema importanza che rispecchi le regole di tipo condivise in types.h, in quanto
+ * questa funzione non legge le regole, ma le applica soltanto.
  */
 
 llvm::Value* CodeGenerator::castValue(llvm::Value *value, ValueType from, ValueType to)
@@ -180,6 +199,7 @@ llvm::Value* CodeGenerator::castValue(llvm::Value *value, ValueType from, ValueT
  * : Entry Point :
  * Funzione "entry point" della generazione del codice macchina.
  * Attiva la codegen a partire da un istanza di AST.
+ * Come per le altre strutture, richiama ogni stmt in modo ricorsivo.
  */
 
 void CodeGenerator::generate(const Program &program)
@@ -194,6 +214,8 @@ void CodeGenerator::generate(const Program &program)
 
 /*
  * Funzione di codegen per ogni stmt del programma.
+ * Il codice di generazione di ogni stmt è racchiuso in funzioni helper per chiarezza e
+ * pulizia del codice.
  */
 
 void CodeGenerator::generateStmt(const Stmt *stmt)
@@ -254,6 +276,13 @@ void CodeGenerator::generateStmt(const Stmt *stmt)
 
     return;
 }
+
+/**
+ * FUNZIONI DI GENERAZIONE STMT
+ * Queste funzioni hanno il solo scopo di racchiudere la logica di generazione di ogni stmt,
+ * in modo da esser richiamate dal dispath principale in caso di bisogno.
+ * Questi codici utilizzano il builder llvm, che genera stmts in base alle variabili di ogni nodo ast.
+ */
 
 void CodeGenerator::generateScopeStmt(const BlockStmt *st)
 {
@@ -454,8 +483,11 @@ void CodeGenerator::generateWhileStmt(const WhileStmt *st)
 }
 
 
-/*
- * Funzione di codegen per ogni expr degli statement.
+/**
+ * FUNZIONI DI GENERAZIONE EXPR
+ * Questa funzione si occupa del dispatch generale della generazione di ogni nodo expr.
+ * La generazione dei nodi più complessi è racchiusa in funzioni helper per chiarezza e pulizia
+ * del codice.
  */
 
 ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
@@ -711,6 +743,7 @@ ExprGenResult CodeGenerator::generateBinaryExpr(const BinaryExpr *s)
             Builder.CreateOr(L, R, "ortmp"),
             resultType
         };
+
     } //end switch
 
     return ExprGenResult{};

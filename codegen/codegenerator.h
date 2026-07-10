@@ -36,7 +36,7 @@ public:
     void generate(const Program& program);
 
     void emitIR();      //ir code
-    void buildTarget(); //creazione target/exe
+    void buildTargetObj(const QString &target_path); //creazione target/exe
 
 private:
     llvm::LLVMContext Context;                              // Contesto llvm incluso dalle funzioni

@@ -228,6 +228,24 @@
 			null
 		],
 		[
+			"C:/Users/Utente/Desktop/Qt/MyCompiler/driver/compilerdriver.h",
+			"MU",
+			"LSSUX4W7A7/moc_compilerdriver.cpp",
+			null
+		],
+		[
+			"C:/Users/Utente/Desktop/Qt/MyCompiler/driver/flags.h",
+			"MU",
+			"LSSUX4W7A7/moc_flags.cpp",
+			null
+		],
+		[
+			"C:/Users/Utente/Desktop/Qt/MyCompiler/driver/options.h",
+			"MU",
+			"LSSUX4W7A7/moc_options.cpp",
+			null
+		],
+		[
 			"C:/Users/Utente/Desktop/Qt/MyCompiler/errorlog/errorlog.h",
 			"MU",
 			"G4UUDXSR7J/moc_errorlog.cpp",
@@ -278,6 +296,7 @@
 	[
 		"C:/Users/Utente/Desktop/Qt/MyCompiler/constants",
 		"C:/Users/Utente/Desktop/Qt/MyCompiler/errorlog",
+		"C:/Users/Utente/Desktop/Qt/MyCompiler",
 		"C:/llvm-install/include",
 		"C:/Qt/6.10.3/mingw_64/include/QtCore",
 		"C:/Qt/6.10.3/mingw_64/include",
@@ -324,6 +343,11 @@
 	[
 		[
 			"C:/Users/Utente/Desktop/Qt/MyCompiler/codegen/codegenerator.cpp",
+			"MU",
+			null
+		],
+		[
+			"C:/Users/Utente/Desktop/Qt/MyCompiler/driver/compilerdriver.cpp",
 			"MU",
 			null
 		],

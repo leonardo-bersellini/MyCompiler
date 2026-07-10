@@ -27,6 +27,9 @@ add_executable(MyCompiler
   constants/keywords.h
   codegen/codegenerator.cpp codegen/codegenerator.h
   constants/types.h
+  driver/compilerdriver.h driver/compilerdriver.cpp
+  driver/flags.h
+  driver/options.h
 
 )
 target_link_libraries(MyCompiler PRIVATE Qt${QT_VERSION_MAJOR}::Core ${LLVM_LIBS})
@@ -34,6 +37,7 @@ target_link_libraries(MyCompiler PRIVATE Qt${QT_VERSION_MAJOR}::Core ${LLVM_LIBS
 target_include_directories(MyCompiler PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/constants
   ${CMAKE_CURRENT_SOURCE_DIR}/errorlog
+  ${CMAKE_CURRENT_SOURCE_DIR}/
 )
 
 target_include_directories(MyCompiler PRIVATE ${LLVM_INCLUDE_DIRS})
