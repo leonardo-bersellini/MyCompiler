@@ -67,7 +67,12 @@ llvm_map_components_to_libnames(LLVM_LIBS
 
 target_link_libraries(Bismuth PRIVATE ${LLVM_LIBS})
 
-# INSTALL
+# BUILD CONFIGURATION
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
+
+# INSTALL COMMAND
+# Questo passaggio permette di creare una cartella correttamente organizzata per la release.
 
 include(GNUInstallDirs)
 install(TARGETS Bismuth
