@@ -1,6 +1,7 @@
 #include "compilerdriver.h"
 
 #include <QFile>
+#include <QFileInfo>
 #include <QCommandLineParser>
 #include <iostream>
 #include <memory>
@@ -148,16 +149,20 @@ bool CompilerDriver::validateOptions(const CompilerOptions &options)
             return false;
         }
         break;
+
     case OutputKind::Executable:
-        reportCliError("this output kind is not implemented yet");
-        return false;
+        if(options.outputFile.isEmpty()) {
+            reportCliError("missing output file");
+            return false;
+        }
+        break;
     }
 
     return true;
 }
 
 /*
- * Questa funzione si occuapa dell'esecuzione vera e propria della pipeline selezionata da
+ * Questa funzione si occupa dell'esecuzione vera e propria della pipeline selezionata da
  * shell di comando.
  * In base alle opzioni costruite nei passaggi precedenti, si invocano funzioni helper per
  * eseguire una pipeline specifica.
@@ -268,13 +273,26 @@ bool CompilerDriver::compilePipeline(const QString &source, const CompilerOption
     switch(options.outkind)
     {
     case OutputKind::Executable :
-        reportCliError("executable output kind not implemented yet");
-        return false;
+        {
+            QString tempObj = options.outputFile + ".obj"; // file oggetto temporaneo
+            codegen.buildTargetObj(tempObj, options.verbose);
 
+            bool linked = codegen.link(tempObj, options.outputFile, options.verbose);
+
+            QFile::remove(tempObj); // rimozione del file oggetto utilizzato
+
+            if (!linked) {
+                reportCliError("linker execution failed");
+                return false;
+            }
+
+            break;
+        }
     case OutputKind::ObjectFile :
         codegen.buildTargetObj(options.outputFile, options.verbose);
         // TODO modificare e dividere in sottofunzioni buildtargetobj, aggiungere opzioni di
         // output condizionale per debug (--build-debug)
+        break;
     }
 
     return true;

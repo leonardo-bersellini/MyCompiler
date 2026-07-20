@@ -37,7 +37,7 @@ public:
 
     void emitIR();      //ir code
     void buildTargetObj(const QString &target_path, bool debug = false); //creazione target obj
-    //void linkObjectFiles(const QStringList &objfile_paths, bool debug = false); //linking exe from obj
+    bool link(const QString &objFile, const QString &outputExe, bool debug = false); //linking exe from obj
 
 private:
     llvm::LLVMContext Context;                              // Contesto llvm incluso dalle funzioni

@@ -26,7 +26,8 @@ struct PipelineFlag {
 };
 
 inline const std::vector<PipelineFlag> pipelineFlags = {
-    { "o", true, "Compile and assemble, but do not link (produces .o)", OutputKind::ObjectFile, &CompilerOptions::outputFile},
+    { "o", true, "Compile and assemble, but do not link (produces .obj)", OutputKind::ObjectFile, &CompilerOptions::outputFile},
+    { "e", true, "Generate an executable from source (produces .exe)", OutputKind::Executable, &CompilerOptions::outputFile},
 };
 
 /**

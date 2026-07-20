@@ -11,6 +11,10 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# BUILD CONFIGURATION
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
+
 # FIND PACKAGE
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
@@ -67,14 +71,9 @@ llvm_map_components_to_libnames(LLVM_LIBS
 
 target_link_libraries(Bismuth PRIVATE ${LLVM_LIBS})
 
-# BUILD CONFIGURATION
-
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
-
-# INSTALL COMMAND
-# Questo passaggio permette di creare una cartella correttamente organizzata per la release.
 
 include(GNUInstallDirs)
+
 install(TARGETS Bismuth
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

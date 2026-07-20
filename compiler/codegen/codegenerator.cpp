@@ -1,5 +1,9 @@
 #include "codegenerator.h"
 
+#include <QCoreApplication>
+#include <QProcess>
+#include <QDir>
+
 #include <llvm/IR/Verifier.h>
 #include <iostream>
 
@@ -104,12 +108,61 @@ void CodeGenerator::buildTargetObj(const QString& target_path, bool debug)
     std::cout << "dest.has_error():" << dest.has_error() << std::endl;
 
     std::cout << std::endl;
-    std::cout << "-Obj creation terminated in code.obj, now link the file with one of the following commands:" << std::endl;
-    std::cout << "clang <main>.obj -o <main>.exe" << std::endl;
-    std::cout << "gcc <main>.obj -o <main>.exe" << std::endl;
-    std::cout << "link.exe main.obj /OUT:main.exe" << std::endl;
 
     return;
+}
+
+/*
+ * Questa funzione si occupa di utilizzare il linker del progetto per costruire un eseguibile,
+ * linkando i file oggetto indicati.
+ * Si utilizza il linker lld-link.exe di msys64-ucrt64
+ */
+
+bool CodeGenerator::link(const QString &objFile, const QString &outputExe, bool debug)
+{
+    QString linkerPath = QCoreApplication::applicationDirPath() + "/lld/lld-link.exe";
+    QString libDir      = QCoreApplication::applicationDirPath() + "/lld/libs";
+
+    //argomenti per lld-link
+    QStringList args;
+    args << objFile;
+    args << QString("-out:%1").arg(outputExe);
+    args << "-subsystem:console";
+    args << QString("-libpath:%1").arg(libDir);
+    args << "crt2.o";
+    args << "libmingw32.a" << "libgcc.a" << "libgcc_eh.a" << "libmoldname.a"
+         << "libmingwex.a" << "libucrt.a" << "libadvapi32.a" << "libshell32.a"
+         << "libuser32.a" << "libkernel32.a";
+
+    std::cout << "linker path: " << linkerPath.toStdString() << std::endl;
+    std::cout << "exists: " << QFile::exists(linkerPath) << std::endl;
+
+    QProcess process;
+    process.setProgram(linkerPath);
+    process.setArguments(args);
+    process.start();
+
+    process.waitForFinished();
+
+
+    if (process.exitCode() != 0) {
+
+        if(debug) {
+            std::cout << "QProcess error: " << process.error() << std::endl;
+            std::cout << "QProcess errorString: " << process.errorString().toStdString() << std::endl;
+
+            std::cout << "\nlinker exit code: -1. \n" << std::endl;
+            std::cout << process.readAllStandardError().toStdString() << std::endl;
+        }
+        return false;
+    }
+
+    if(debug) {
+        std::cout << "linker: lld-link.exe [msys64-ucrt64]\n" << std::endl;
+        std::cout << "linker exit code: " << process.exitCode()  << std::endl;
+    }
+
+    return true;
 }
 
 /// --- UTILITIES --- ///
