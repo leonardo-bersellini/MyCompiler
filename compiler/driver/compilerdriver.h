@@ -27,11 +27,12 @@ private:
     void initCommandLineParser();
 
     bool parseArguments(const QCoreApplication &app, CompilerOptions &options);
-    bool validateOptions(const CompilerOptions &options);
+    bool validateOptions(CompilerOptions &options);
     int execute(const CompilerOptions &options);
 
     void printUsage() const;
     void reportCliError(const QString &message) const;
+    void reportCliMsg(const QString &message) const;
 
     bool compilePipeline(const QString& source, const CompilerOptions &options);
 };

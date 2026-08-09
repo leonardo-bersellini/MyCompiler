@@ -1,5 +1,6 @@
 #include "compilerdriver.h"
 
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QCommandLineParser>
@@ -18,6 +19,24 @@
  * Il driver ha la funzione di richiamare la pipeline corretta in base al comando selezionato
  * dall'utente da riga di comando.
  */
+
+/*
+ * Metodo helper per ritornare errori a console.
+ */
+
+void CompilerDriver::reportCliError(const QString &message) const
+{
+    std::cerr << "error: " << message.toStdString() << std::endl;
+}
+
+/*
+ * Metodo helper per mostrare messaggi a console
+ */
+
+void CompilerDriver::reportCliMsg(const QString &message) const
+{
+    std::cout << message.toStdString() << std::endl;
+}
 
 /*
  * Pipeline del driver:
@@ -91,10 +110,12 @@ bool CompilerDriver::parseArguments(const QCoreApplication &app, CompilerOptions
 
     // Recupero file di input
     const QStringList positionalArgs = parser.positionalArguments();
+
     if (positionalArgs.isEmpty()) {
         reportCliError("missing input file");
         return false;
     }
+
     options.inputFile = positionalArgs.first();
 
     // Pipeline flags, solo uno possibile per volta
@@ -110,6 +131,7 @@ bool CompilerDriver::parseArguments(const QCoreApplication &app, CompilerOptions
             reportCliError("conflicting pipeline flags specified");
             return false;
         }
+
         pipelineFlagAlreadySet = true;
 
         options.outkind = flag.resultingKind;
@@ -128,12 +150,35 @@ bool CompilerDriver::parseArguments(const QCoreApplication &app, CompilerOptions
 }
 
 /*
+ * Funzione helper.
+ * Si occupa della deduzione del percorso del file di output quando non specificato.
+ */
+
+void deduceOutputFile(CompilerOptions& options, const QString& outExtension)
+{
+    QFileInfo fi(options.inputFile);
+
+    QString path = fi.path();
+
+    if(path.isEmpty() || path == ".") {
+        path = QDir::currentPath();
+    }
+
+    // creazione del file di output
+    QString outputFile = QDir(path).filePath(fi.completeBaseName() + outExtension);
+
+    options.outputFile = outputFile;
+
+    return;
+}
+
+/*
  * Questa funzione si occupa di eseguire il controllo di correttezza delle opzioni
  * ricostruite dal parsing.
  * Se non sono riscontarti errori negli argomenti selezionati, si può procedere con l'esecuzione.
  */
 
-bool CompilerDriver::validateOptions(const CompilerOptions &options)
+bool CompilerDriver::validateOptions(CompilerOptions &options)
 {
     QFile inputFile(options.inputFile);
     if (!inputFile.exists()) {
@@ -144,16 +189,18 @@ bool CompilerDriver::validateOptions(const CompilerOptions &options)
     switch (options.outkind)
     {
     case OutputKind::ObjectFile:
-        if (options.outputFile.isEmpty()) {
-            reportCliError("missing output file (-o)");
-            return false;
+        if (options.outputFile.isEmpty())
+        {
+            deduceOutputFile(options, QString(".o"));
+            reportCliMsg("deduced output file path: " + options.outputFile);
         }
         break;
 
     case OutputKind::Executable:
-        if(options.outputFile.isEmpty()) {
-            reportCliError("missing output file");
-            return false;
+        if(options.outputFile.isEmpty())
+        {
+            deduceOutputFile(options, QString(".exe"));
+            reportCliMsg("deduced output file path: " + options.outputFile);
         }
         break;
     }
@@ -184,19 +231,10 @@ int CompilerDriver::execute(const CompilerOptions &options)
     if(!good) {
         reportCliError("collected -1 exit status");
     } else {
-        std::cout << "\nexecution returned with exit code 0" << std::endl;
+        reportCliMsg("\nexecution returned with exit code 0");
     }
 
     return 0;
-}
-
-/*
- * Metodo helper per ritornare errori a console.
- */
-
-void CompilerDriver::reportCliError(const QString &message) const
-{
-    std::cerr << "error: " << message.toStdString() << std::endl;
 }
 
 /*
@@ -218,6 +256,14 @@ bool CompilerDriver::compilePipeline(const QString &source, const CompilerOption
 
     if(errorLog.hasErrors()) {
         reportCliError("lexer execution return error code: typo error");
+
+        if(options.verbose) {
+            errorLog.printErrors();
+        }
+        if(options.emitIR) {
+            reportCliError("could not solve specified options for compiler execution [code-steps-not-generated]");
+        }
+
         return false;
     }
 
@@ -225,6 +271,14 @@ bool CompilerDriver::compilePipeline(const QString &source, const CompilerOption
 
     if(errorLog.hasErrors()) {
         reportCliError("parser execution return error code: syntax error");
+
+        if(options.verbose) {
+            errorLog.printErrors();
+        }
+        if(options.emitIR) {
+            reportCliError("could not solve specified options for compiler execution [code-steps-not-generated]");
+        }
+
         return false;
     }
 
@@ -232,6 +286,14 @@ bool CompilerDriver::compilePipeline(const QString &source, const CompilerOption
 
     if(errorLog.hasErrors()) {
         reportCliError("analyzer execution return error code: semantic error");
+
+        if(options.verbose) {
+            errorLog.printErrors();
+        }
+        if(options.emitIR) {
+            reportCliError("could not solve specified options for compiler execution [code-steps-not-generated]");
+        }
+
         return false;
     }
 
@@ -246,17 +308,17 @@ bool CompilerDriver::compilePipeline(const QString &source, const CompilerOption
     }
     else if(options.verbose)
     {
-        std::cout << "\nSource text:" << source.toStdString() << std::endl;
+        reportCliMsg("\nSource text: " + source);
 
         lexer.printTokens();
 
-        std::cout << "\nProgram statements:\n" << std::endl;
+        reportCliMsg("\nProgram statements:\n");
         for (const auto& stmt : program->statements) {
             printStmt(stmt.get());
         }
 
-        std::cout << "\nNo errors found\n" << std::endl;
-        std::cout << "Building obj target...\n" << std::endl;
+        reportCliMsg("\nNo errors found\n");
+        reportCliMsg("Building obj target...\n");
 
         codegen.emitIR();
     }

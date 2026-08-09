@@ -39,7 +39,6 @@ add_executable(Bismuth
   compiler/parser/parser.cpp compiler/parser/parser.h
   compiler/semantics/semanticanalyzer.cpp compiler/semantics/semanticanalyzer.h
 
-
 )
 target_link_libraries(Bismuth PRIVATE Qt${QT_VERSION_MAJOR}::Core ${LLVM_LIBS})
 

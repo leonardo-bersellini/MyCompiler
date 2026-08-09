@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
 
     QCoreApplication a(argc, argv);
     a.setApplicationName("Bismuth Compiler for C++");
-    a.setApplicationVersion("0.1.0");
+    a.setApplicationVersion("0.1.1");
 
     CompilerDriver driver;
     driver.run(a);
