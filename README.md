@@ -128,17 +128,33 @@ The main goal of this project its just the exploration of compilers for personal
 
 ---
 
-## Licence and Third-Part Tools
+## License
 
-This project has no licence as it is just a personal project for fun.
+Bismuth is licensed under the MIT License. See the [LICENSE](LICENSE) file for the full license text.
 
-Jet it uses third-part software and tools, such as:
-- Qt6 from Qt Group
-- Ucrt64 from Msys2 project
+---
 
-These components remain subject to their respective original licenses.
-This is a personal, non-commercial project distributed free of charge and provided without any warranty of any kind.
+### Attribution
 
-If you desire to create a different project based on the code of this repository, feel free to do it. If you want, we would be very happy if you mentioned this code as starting point or inspiration for your own project.
+If you use, modify, or distribute Bismuth or a derivative work, please preserve the original copyright notice and clearly acknowledge Bismuth as the original project.
+
+For example:
+
+> This project is based on Bismuth Compiler by Leonardo Bersellini.
+> Original project: https://github.com/leonardo-bersellini/MyCompiler
+
+This attribution is requested to preserve the connection with the original Bismuth project and is in addition to the requirements of the MIT License.
+
+---
+
+### Third-party software
+
+Bismuth uses third-party software, including:
+
+- **LLVM** — Apache License 2.0 with LLVM Exceptions
+- **Qt 6** — licensed under the applicable GNU LGPL/GPL terms
+- **MSYS2** — packages are distributed under their respective licenses
+
+Third-party software remains subject to its own license terms.
 
 ---
