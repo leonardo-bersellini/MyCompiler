@@ -1,11 +1,15 @@
 #include "codegenerator.h"
 
-#include <QCoreApplication>
-#include <QProcess>
-#include <QDir>
+// per utilizzo di processi figli di cmd.exe
+#ifdef _WIN32
+    #define popen _popen
+    #define pclose _pclose
+#endif
 
 #include <llvm/IR/Verifier.h>
 #include <iostream>
+#include <filesystem>
+#include <windows.h>
 
 /**
  * CODE GENERATION
@@ -45,7 +49,7 @@ void CodeGenerator::emitIR()
  * Questo codice llvm verrà compilato per un'architettura Windows.
  */
 
-void CodeGenerator::buildTargetObj(const QString& target_path, bool debug)
+void CodeGenerator::buildTargetObj(const std::string& target_path, bool debug)
 {
     //INIT TARGET
     llvm::InitializeNativeTarget();
@@ -84,9 +88,9 @@ void CodeGenerator::buildTargetObj(const QString& target_path, bool debug)
     //CREAZIONE FILE OBJ
     std::error_code EC;
 
-    llvm::raw_fd_ostream dest(target_path.toStdString(), EC, llvm::sys::fs::OF_None);
+    llvm::raw_fd_ostream dest(target_path, EC, llvm::sys::fs::OF_None);
     if (EC) {
-        qDebug() << "Errore apertura file:" << QString::fromStdString(EC.message());
+        std::cout << "Errore apertura file:" << EC.message() << std::endl;
         return;
     }
     llvm::legacy::PassManager pass;
@@ -118,48 +122,55 @@ void CodeGenerator::buildTargetObj(const QString& target_path, bool debug)
  * Si utilizza il linker lld-link.exe di msys64-ucrt64
  */
 
-bool CodeGenerator::link(const QString &objFile, const QString &outputExe, bool debug)
+bool CodeGenerator::link(const std::string &objFile, const std::string &outputExe, bool debug)
 {
-    QString linkerPath = QCoreApplication::applicationDirPath() + "/lld/lld-link.exe";
-    QString libDir      = QCoreApplication::applicationDirPath() + "/lld/libs";
+    wchar_t wbuf[MAX_PATH];
+    GetModuleFileNameW(nullptr, wbuf, MAX_PATH);
+    std::filesystem::path appDir = std::filesystem::path(wbuf).parent_path();
+
+    std::string linkerPath = appDir.string() + "/lld-link.exe";
+    std::string libDir     = appDir.string() + "/libs";
 
     //argomenti per lld-link
-    QStringList args;
-    args << objFile;
-    args << QString("-out:%1").arg(outputExe);
-    args << "-subsystem:console";
-    args << QString("-libpath:%1").arg(libDir);
-    args << "crt2.o";
-    args << "libmingw32.a" << "libgcc.a" << "libgcc_eh.a" << "libmoldname.a"
-         << "libmingwex.a" << "libucrt.a" << "libadvapi32.a" << "libshell32.a"
-         << "libuser32.a" << "libkernel32.a";
+    std::vector<std::string> args = 
+    {
+        objFile,
+        "-out:" + outputExe,
+        "-subsystem:console",
+        "crt2.o",
+        "libmingw32.a",
+        "libgcc.a",
+        "libgcc_eh.a",
+        "libmoldname.a",
+        "libmingwex.a",
+        "libucrt.a",
+        "libadvapi32.a",
+        "libshell32.a",
+        "libuser32.a",
+        "libkernel32.a"
+    };
 
-    std::cout << "linker path: " << linkerPath.toStdString() << std::endl;
-    std::cout << "exists: " << QFile::exists(linkerPath) << std::endl;
+    std::cout << "linker path: " << linkerPath << std::endl;
+    std::cout << "exists: " << std::filesystem::exists(linkerPath) << std::endl;
 
-    QProcess process;
-    process.setProgram(linkerPath);
-    process.setArguments(args);
-    process.start();
+    std::string cmd = linkerPath;
+    for (const auto& a : args) cmd += " " + a;
+    cmd += " 2>&1";
 
-    process.waitForFinished();
+    FILE* pipe = popen(cmd.c_str(), "r");
+    std::string output;
+    char _buf[256];
+    while (fgets(_buf, sizeof(_buf), pipe)) output += _buf;
+    int exitCode = pclose(pipe);
 
-
-    if (process.exitCode() != 0) {
-
-        if(debug) {
-            std::cout << "QProcess error: " << process.error() << std::endl;
-            std::cout << "QProcess errorString: " << process.errorString().toStdString() << std::endl;
-
-            std::cout << "\nlinker exit code: -1. \n" << std::endl;
-            std::cout << process.readAllStandardError().toStdString() << std::endl;
-        }
+    if (exitCode != 0) {
+        if (debug) std::cout << "\nlinker exit code: " << exitCode << "\n" << output << std::endl;
         return false;
     }
 
     if(debug) {
         std::cout << "linker: lld-link.exe [msys64-ucrt64]\n" << std::endl;
-        std::cout << "linker exit code: " << process.exitCode()  << std::endl;
+        std::cout << "linker exit code: " << exitCode  << std::endl;
     }
 
     return true;
@@ -367,8 +378,8 @@ void CodeGenerator::generateAssignStmt(const AssignmentStmt *st)
 void CodeGenerator::generateDeclarationStmt(const DeclarationStmt *st)
 {
     // alloca variabile
-    auto* alloc = Builder.CreateAlloca(getLLVMType(st->type), nullptr, st->name.toStdString());
-    symbolTable.insert(st->name, alloc);
+    auto* alloc = Builder.CreateAlloca(getLLVMType(st->type), nullptr, st->name);
+    symbolTable.insert({st->name, alloc});
 
     if(st->initializer) {
         // store del valore in inizializzazione
@@ -387,7 +398,7 @@ void CodeGenerator::generateFunctionStmt(const FunctionStmt *st)
     auto *funcType = llvm::FunctionType::get(getLLVMType(st->returnType), args, false);
 
     auto *function = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage,
-                                            st->name.toStdString(), Module.get());
+                                            st->name, Module.get());
 
     auto *entry = llvm::BasicBlock::Create(Context, "entry", function);
 
@@ -574,7 +585,7 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
     else if(auto s = dynamic_cast<const CharExpr*>(expr))
     {
         return ExprGenResult {
-            llvm::ConstantInt::get(getLLVMType(ValueType::Char), s->value.toLatin1()),
+            llvm::ConstantInt::get(getLLVMType(ValueType::Char), s->value),
             ValueType::Char
         };
     }
@@ -594,7 +605,7 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
         llvm::AllocaInst *val = symbolTable[s->name];
 
         return ExprGenResult {
-            Builder.CreateLoad(val->getAllocatedType(), val, s->name.toStdString()),
+            Builder.CreateLoad(val->getAllocatedType(), val, s->name),
             getValueType(val->getAllocatedType()),
         };
     }
@@ -602,7 +613,7 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
     // Function Call Expression
     else if(auto s = dynamic_cast<const CallExpr*>(expr))
     {
-        llvm::Function *callee = Module->getFunction(s->name.toStdString());
+        llvm::Function *callee = Module->getFunction(s->name);
         if(!callee) return ExprGenResult{};
 
         std::vector<llvm::Value*> args;
@@ -611,7 +622,7 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
         }
 
         return ExprGenResult {
-            Builder.CreateCall(callee, args, s->name.toStdString()),
+            Builder.CreateCall(callee, args, s->name),
             getValueType(callee->getReturnType())
         };
     }

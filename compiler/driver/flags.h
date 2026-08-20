@@ -1,7 +1,7 @@
 #ifndef FLAGS_H
 #define FLAGS_H
 
-#include <QString>
+#include <string>
 #include <vector>
 
 #include "options.h"
@@ -18,11 +18,11 @@
  */
 
 struct PipelineFlag {
-    QString name;
+    std::string name;
     bool requiresValue;
-    QString description;
+    std::string description;
     OutputKind resultingKind;
-    QString CompilerOptions::* valueTarget; //nullptr se non serve un valore
+    std::string CompilerOptions::* valueTarget; //nullptr se non serve un valore
 };
 
 inline const std::vector<PipelineFlag> pipelineFlags = {
@@ -41,8 +41,8 @@ inline const std::vector<PipelineFlag> pipelineFlags = {
  */
 
 struct UtilityFlag {
-    QString name;
-    QString description;
+    std::string name;
+    std::string description;
     bool CompilerOptions::* target;
 };
 

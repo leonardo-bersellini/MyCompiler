@@ -1,7 +1,7 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
-#include <QString>
+#include <string>
 
 struct TextPosition {
     int line;
@@ -62,12 +62,12 @@ enum class TokenType {
 struct Token {
     TokenType type;
     double numericValue; //valore se il token corrisponde ad un numero
-    QString lexeme;     //testo interpretato come token
+    std::string lexeme;     //testo interpretato come token
     TextPosition position;
 };
 
-inline QString typeToString(TokenType type) {
-    QString typeStr;
+inline std::string typeToString(TokenType type) {
+    std::string typeStr;
     switch(type) {
     case TokenType::IntegerLiteral: typeStr = "IntegerLiteral";
         break;
@@ -150,7 +150,7 @@ inline QString typeToString(TokenType type) {
     case TokenType::Comma: typeStr = "Comma";
         break;
 
-    Q_UNREACHABLE();
+    default : typeStr = "ErrorTranslation";
     }
     return typeStr;
 }

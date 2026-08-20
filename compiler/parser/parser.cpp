@@ -9,12 +9,12 @@ Parser::Parser() {}
 Token Parser::peek(int offset) const
 {
     int position = currentPos + offset;
-    if(isAtEnd(position)) return tokens.last();
+    if(isAtEnd(position)) return tokens.back();
     return tokens.at(position);
 }
 
 Token Parser::advance() {
-    if(isAtEnd()) return tokens.last();
+    if(isAtEnd()) return tokens.back();
     Token current = tokens.at(currentPos);
     currentPos++;
     return current;
@@ -62,7 +62,7 @@ bool Parser::expect(TokenType type) {
  * si occupa di elaborare e conservare gli statements corrispondenti ai token in un oggetto *<program>
  */
 
-std::unique_ptr<Program> Parser::parseProgram(const QList<Token>& tokens, ErrorLog &errorLog)
+std::unique_ptr<Program> Parser::parseProgram(const std::vector<Token>& tokens, ErrorLog &errorLog)
 {
     this->tokens = tokens;
     this->errorLog = &errorLog;
@@ -233,7 +233,7 @@ std::unique_ptr<Stmt> Parser::parseBranchBody()
 
 std::unique_ptr<Stmt> Parser::parseAssignStmt()
 {
-    QString name = advance().lexeme; //consuma l'identificatore
+    std::string name = advance().lexeme; //consuma l'identificatore
     advance();                       //consuma '='
     auto expr = parseExpr();   //rimangono i token dell'espressione
     expect(TokenType::Semicolon);    //expect ; after
@@ -257,8 +257,8 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt()
     {
         // --- Dichiarazione con inizializzazione --- //
 
-        QString type = advance().lexeme;        // consuma TypeKeyword
-        QString name = peek().lexeme;           // legge il nome presumendo che sia un identifier
+        std::string type = advance().lexeme;        // consuma TypeKeyword
+        std::string name = peek().lexeme;           // legge il nome presumendo che sia un identifier
         bool isValid = expect(TokenType::Identifier); // verifica identifier e lo consuma
 
         if(!isValid)
@@ -272,7 +272,7 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt()
         expect(TokenType::Semicolon);
 
         auto d = std::make_unique<DeclarationStmt>();
-        d->type = Type::toValueType(type); //QString -> ValueType
+        d->type = Type::toValueType(type); //std::string -> ValueType
         d->name = name;
         d->initializer = std::move(initExpr);
         return d;
@@ -280,12 +280,12 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt()
     else
     {
         // --- Dichiarazione pura --- //
-        QString type = advance().lexeme;  //consuma TypeKeyword
-        QString name = advance().lexeme;   // consuma Identifier
+        std::string type = advance().lexeme;  //consuma TypeKeyword
+        std::string name = advance().lexeme;   // consuma Identifier
         expect(TokenType::Semicolon);
 
         auto d = std::make_unique<DeclarationStmt>();
-        d->type = Type::toValueType(type); //QString -> ValueType
+        d->type = Type::toValueType(type); //std::string -> ValueType
         d->name = name;
         d->initializer = nullptr; //nessun initializer
         return d;
@@ -301,7 +301,7 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt()
 std::unique_ptr<Stmt> Parser::parseFunctionStmt()
 {
     ValueType returnType = Type::toValueType(advance().lexeme); // consuma tipo di ritorno
-    QString identifier = advance().lexeme; // consuma nome funzione
+    std::string identifier = advance().lexeme; // consuma nome funzione
 
     expect(TokenType::LParen);
 
@@ -311,7 +311,7 @@ std::unique_ptr<Stmt> Parser::parseFunctionStmt()
     while(!check(TokenType::RParen) && !isAtEnd())
     {
         ValueType paramType = Type::toValueType(advance().lexeme); // consuma tipo parametro
-        QString paramName = advance().lexeme;                 // consuma nome parametro
+        std::string paramName = advance().lexeme;                 // consuma nome parametro
 
         params.push_back(FunctionParam{paramType, paramName});
 
@@ -662,7 +662,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
     // Stringhe letterali
     else if(check(TokenType::StringLiteral))
     {
-        QString lexeme = advance().lexeme;
+        std::string lexeme = advance().lexeme;
 
         auto strExpr = std::make_unique<StringExpr>();
         strExpr->value = lexeme;
@@ -672,7 +672,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
     // Char letterali
     else if(check(TokenType::CharLiteral))
     {
-        QString ch_str = advance().lexeme; //stringa con un carattere
+        std::string ch_str = advance().lexeme; //stringa con un carattere
 
         auto charExpr = std::make_unique<CharExpr>();
         charExpr->value = ch_str.at(0); //estrazione char
@@ -682,7 +682,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
     // Booleano Letterale
     else if(check(TokenType::BoolLiteral))
     {
-        QString lexeme = advance().lexeme; //consuma il token valore
+        std::string lexeme = advance().lexeme; //consuma il token valore
         bool val;
 
         if(keywords.contains(lexeme)) {

@@ -36,14 +36,14 @@ public:
     void generate(const Program& program);
 
     void emitIR();      //ir code
-    void buildTargetObj(const QString &target_path, bool debug = false); //creazione target obj
-    bool link(const QString &objFile, const QString &outputExe, bool debug = false); //linking exe from obj
+    void buildTargetObj(const std::string &target_path, bool debug = false); //creazione target obj
+    bool link(const std::string &objFile, const std::string &outputExe, bool debug = false); //linking exe from obj
 
 private:
     llvm::LLVMContext Context;                              // Contesto llvm incluso dalle funzioni
     llvm::IRBuilder<> Builder;                              // Genera l'IR llvm
     std::unique_ptr<llvm::Module> Module;                   // Contenitore del codice generato
-    QMap<QString, llvm::AllocaInst*> symbolTable;
+    std::unordered_map<std::string, llvm::AllocaInst*> symbolTable;
 
     llvm::Type* getLLVMType(const ValueType &type);
     ValueType getValueType(llvm::Type *type);

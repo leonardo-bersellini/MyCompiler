@@ -1,7 +1,7 @@
 #ifndef OPTIONS_H
 #define OPTIONS_H
 
-#include <QString>
+#include <string>
 
 /**
  * OPZIONI DI COMPILAZIONE
@@ -19,8 +19,8 @@ enum class OutputKind
 
 struct CompilerOptions
 {
-    QString inputFile;
-    QString outputFile;
+    std::string inputFile;
+    std::string outputFile;
     OutputKind outkind = OutputKind::Executable;
 
     //flag opzionali aggiuntive

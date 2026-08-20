@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(MyCompiler LANGUAGES CXX)
+project(MyCompiler 
+    VERSION 1.0.2 
+    LANGUAGES CXX
+    DESCRIPTION "Bismuth: compilatore sviluppato in C++ e LLVM"
+)
 
 # NOME DEL PROGETTO : MYCOMPILER
 
@@ -8,12 +12,19 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # BUILD CONFIGURATION
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
+# PROJECT CONFIGURATION
+
+configure_file(
+    ${CMAKE_SOURCE_DIR}/compiler/config/version.h.in
+    ${CMAKE_BINARY_DIR}/generated/version.h
+)
 
 # FIND PACKAGE
 
@@ -22,6 +33,7 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
 
 set(LLVM_DIR "C:/llvm-install/lib/cmake/llvm")
 find_package(LLVM REQUIRED CONFIG)
+
 
 # NOME DEL COMPILER : BISMUTH_COMPILER
 
@@ -34,6 +46,7 @@ add_executable(Bismuth
   compiler/codegen/codegenerator.cpp compiler/codegen/codegenerator.h
   compiler/constants/AbstractSintaxTree.h compiler/constants/keywords.h compiler/constants/symbols.h compiler/constants/token.h compiler/constants/types.h
   compiler/driver/compilerdriver.cpp compiler/driver/compilerdriver.h compiler/driver/flags.h compiler/driver/options.h
+  compiler/driver/commandlineparser/commandlineparser.h compiler/driver/commandlineparser/commandlineparser.cpp
   compiler/errorlog/errorlog.cpp compiler/errorlog/errorlog.h
   compiler/lexer/lexer.cpp compiler/lexer/lexer.h
   compiler/parser/parser.cpp compiler/parser/parser.h
@@ -42,6 +55,21 @@ add_executable(Bismuth
 )
 target_link_libraries(Bismuth PRIVATE Qt${QT_VERSION_MAJOR}::Core ${LLVM_LIBS})
 
+# COMPILE DEFINITIONS AND MACROS
+
+target_compile_definitions(Bismuth PRIVATE
+    $<$<CONFIG:Debug>:DEBUG_MACRO>
+    $<$<CONFIG:Release>:RELEASE_MACRO>
+)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(EXE_SUFFIX "")
+else()
+    set(EXE_SUFFIX "_${CMAKE_BUILD_TYPE}")
+endif()
+
+set_target_properties(Bismuth PROPERTIES OUTPUT_NAME "Bismuth${EXE_SUFFIX}")
+
 # INCLUDE DIRECTORIES
 
 target_include_directories(Bismuth PRIVATE
@@ -49,6 +77,8 @@ target_include_directories(Bismuth PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/compiler/constants
   ${CMAKE_CURRENT_SOURCE_DIR}/compiler
 )
+
+target_include_directories(Bismuth PRIVATE ${CMAKE_BINARY_DIR}/generated)
 
 target_include_directories(Bismuth PRIVATE ${LLVM_INCLUDE_DIRS})
 target_compile_definitions(Bismuth PRIVATE ${LLVM_DEFINITIONS})
@@ -70,6 +100,17 @@ llvm_map_components_to_libnames(LLVM_LIBS
 
 target_link_libraries(Bismuth PRIVATE ${LLVM_LIBS})
 
+
+# POST-BUILD CONFIGURATION (THIRD-PARTY DLLS)
+
+add_custom_command(TARGET Bismuth POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/third_party/lld"
+        "$<TARGET_FILE_DIR:Bismuth>"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/third_party/mingw-runtime"
+        "$<TARGET_FILE_DIR:Bismuth>"
+)
 
 include(GNUInstallDirs)
 

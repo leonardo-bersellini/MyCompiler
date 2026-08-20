@@ -1,7 +1,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include <QString>
+#include <string>
 #include "token.h"
 
 /**
@@ -37,8 +37,8 @@ namespace Type
     inline ValueType binaryResultType(TokenType _operator, ValueType left, ValueType right);
     inline ValueType unaryResultType(TokenType _operator, ValueType left);
     inline ValueType promotionType(ValueType first, ValueType second);
-    inline QString toString(const ValueType& type);
-    inline ValueType toValueType(const QString& typeName);
+    inline std::string toString(const ValueType& type);
+    inline ValueType toValueType(const std::string& typeName);
 
     // TODO aggiungere commenti alla sezione Type
 }
@@ -254,7 +254,7 @@ ValueType Type::promotionType(ValueType first, ValueType second)
     return ValueType::Error;
 }
 
-QString Type::toString(const ValueType& type) {
+std::string Type::toString(const ValueType& type) {
     switch(type) {
     case ValueType::Int: return "Int";
         break;
@@ -274,7 +274,7 @@ QString Type::toString(const ValueType& type) {
     return "Unknown";
 }
 
-ValueType Type::toValueType(const QString& typeName) {
+ValueType Type::toValueType(const std::string& typeName) {
     if (typeName == "int") return ValueType::Int;
     if (typeName == "double") return ValueType::Double;
     if (typeName == "string") return ValueType::String;

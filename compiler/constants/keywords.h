@@ -1,11 +1,11 @@
 #ifndef KEYWORDS_H
 #define KEYWORDS_H
 
-#include <QMap>
-#include <QString>
+#include <unordered_map>
+#include <string>
 #include "token.h"
 
-inline const QMap<QString, TokenType> keywords = {
+inline const std::unordered_map<std::string, TokenType> keywords = {
     {"int", TokenType::TypeKeyword},
     {"double", TokenType::TypeKeyword},
     {"char", TokenType::TypeKeyword},

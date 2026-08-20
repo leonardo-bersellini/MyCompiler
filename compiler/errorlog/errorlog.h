@@ -1,12 +1,12 @@
 #ifndef ERRORLOG_H
 #define ERRORLOG_H
 
-#include <QString>
-#include <QList>
+#include <string>
+#include <vector>
 #include "token.h" //TextPosition
 
 struct CompilerError {
-    QString message;
+    std::string message;
     TextPosition position;
 };
 
@@ -15,14 +15,14 @@ class ErrorLog
 public:
     ErrorLog();
 
-    void addError(const QString& message, TextPosition position = {-1,-1});
+    void addError(const std::string& message, TextPosition position = {-1,-1});
     bool hasErrors() const;
-    const QList<CompilerError>& getErrors() const;
+    const std::vector<CompilerError>& getErrors() const;
     void printErrors() const;
     void clear();
 
 private:
-    QList<CompilerError> errors;
+    std::vector<CompilerError> errors;
 };
 
 #endif // ERRORLOG_H

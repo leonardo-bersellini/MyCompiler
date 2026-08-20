@@ -1,6 +1,6 @@
 #include "errorlog.h"
 
-#include <QDebug>
+#include <iostream>
 
 ErrorLog::ErrorLog() {}
 
@@ -8,19 +8,19 @@ ErrorLog::ErrorLog() {}
  * Aggiunge un oggetto errore alla lista interna
  */
 
-void ErrorLog::addError(const QString &message, TextPosition position)
+void ErrorLog::addError(const std::string &message, TextPosition position)
 {
     CompilerError err;
     err.message = message;
     err.position = position;
-    this->errors.append(err);
+    this->errors.push_back(err);
 }
 
 /*
  * Restituisce la lista intern di errori
  */
 
-const QList<CompilerError>& ErrorLog::getErrors() const
+const std::vector<CompilerError>& ErrorLog::getErrors() const
 {
     return this->errors;
 }
@@ -40,9 +40,9 @@ bool ErrorLog::hasErrors() const
 
 void ErrorLog::printErrors() const {
     for (const auto& err : errors) {
-        qDebug() << "Error at line" << err.position.line
+        std::cout << "Error at line" << err.position.line
                 << "col" << err.position.column
-                << ":" << err.message;
+                << ":" << err.message << std::endl;
     }
 }
 

@@ -1,7 +1,8 @@
 #ifndef SYMBOLS_H
 #define SYMBOLS_H
 
-#include <QString>
+#include <string>
+#include <vector>
 
 #include "token.h"
 #include "types.h"

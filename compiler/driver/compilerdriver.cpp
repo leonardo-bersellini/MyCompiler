@@ -1,17 +1,21 @@
 #include "compilerdriver.h"
 
-#include <QDir>
-#include <QFile>
-#include <QFileInfo>
-#include <QCommandLineParser>
 #include <iostream>
 #include <memory>
+#include <fstream>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 #include "lexer/lexer.h"
 #include "parser/parser.h"
 #include "semantics/semanticanalyzer.h"
 #include "errorlog/errorlog.h"
 #include "codegen/codegenerator.h"
+
+#include "commandlineparser/commandlineparser.h"
+
+#include "version.h" //generato da cmake
 
 /**
  * COMPILER DRIVER
@@ -24,18 +28,18 @@
  * Metodo helper per ritornare errori a console.
  */
 
-void CompilerDriver::reportCliError(const QString &message) const
+void CompilerDriver::reportCliError(const std::string &message) const
 {
-    std::cerr << "error: " << message.toStdString() << std::endl;
+    std::cerr << "error: " << message << std::endl;
 }
 
 /*
  * Metodo helper per mostrare messaggi a console
  */
 
-void CompilerDriver::reportCliMsg(const QString &message) const
+void CompilerDriver::reportCliMsg(const std::string &message) const
 {
-    std::cout << message.toStdString() << std::endl;
+    std::cout << message << std::endl;
 }
 
 /*
@@ -46,13 +50,13 @@ void CompilerDriver::reportCliMsg(const QString &message) const
  * il driver da terminale.
  */
 
-int CompilerDriver::run(const QCoreApplication &app)
+int CompilerDriver::run(int argc, char* argv[])
 {
     initCommandLineParser();
 
     CompilerOptions options;
-    if (!parseArguments(app, options)) {
-        return 1; // errore già stampato da reportCliError
+    if (!parseArguments(argc, argv, options)) {
+        return 1; // errore già stampato
     }
 
     if (!validateOptions(options)) {
@@ -70,8 +74,9 @@ int CompilerDriver::run(const QCoreApplication &app)
 
 void CompilerDriver::initCommandLineParser()
 {
-    parser.setApplicationDescription("Compilatore sviluppato in C++ e LLVM");
-    parser.addVersionOption();
+    parser.setApplicationDescription(APP_DESCRIPTION);
+    parser.addVersionOption(APP_VERSION);
+    parser.addHelpOption();
 
     //argomento posizionale: file di input
     parser.addPositionalArgument("inputfile", "indirizzo del codice sorgente da compilare");
@@ -79,23 +84,21 @@ void CompilerDriver::initCommandLineParser()
     for(const PipelineFlag& flag : pipelineFlags)
     {
         if(flag.requiresValue) {
-            QCommandLineOption option(flag.name, flag.description, "value");
+            CommandLineOption option(flag.name, flag.description, "value");
             //il terzo parametro indica il nome placeholder mostrato nell'helper
             //la sola presenza di questo parametro inizializzato indica che il comando necessita di un valore
             parser.addOption(option);
         } else {
-            QCommandLineOption option(flag.name, flag.description);
+            CommandLineOption option(flag.name, flag.description);
             parser.addOption(option);
         }
     }
 
     for(const UtilityFlag& flag : utilityFlags)
     {
-        QCommandLineOption option(flag.name, flag.description);
+        CommandLineOption option(flag.name, flag.description);
         parser.addOption(option);
     }
-
-    parser.addHelpOption();
 }
 
 /*
@@ -103,20 +106,20 @@ void CompilerDriver::initCommandLineParser()
  * argomenti a riga di comando e, in base ad essi, ritornare un errore o meno.
  */
 
-bool CompilerDriver::parseArguments(const QCoreApplication &app, CompilerOptions &options)
+bool CompilerDriver::parseArguments(int argc, char* argv[], CompilerOptions &options)
 {
     // Parsing degli argomenti
-    parser.process(app);
+    parser.process(argc, argv);
 
     // Recupero file di input
-    const QStringList positionalArgs = parser.positionalArguments();
+    const std::vector<std::string> positionalArgs = parser.positionalArguments();
 
-    if (positionalArgs.isEmpty()) {
+    if (positionalArgs.empty()) {
         reportCliError("missing input file");
         return false;
     }
 
-    options.inputFile = positionalArgs.first();
+    options.inputFile = positionalArgs.at(0);
 
     // Pipeline flags, solo uno possibile per volta
     bool pipelineFlagAlreadySet = false;
@@ -154,20 +157,19 @@ bool CompilerDriver::parseArguments(const QCoreApplication &app, CompilerOptions
  * Si occupa della deduzione del percorso del file di output quando non specificato.
  */
 
-void deduceOutputFile(CompilerOptions& options, const QString& outExtension)
+void deduceOutputFile(CompilerOptions& options, const std::string& outExtension)
 {
-    QFileInfo fi(options.inputFile);
+    fs::path inputPath(options.inputFile);
 
-    QString path = fi.path();
+    fs::path directory = inputPath.parent_path();
 
-    if(path.isEmpty() || path == ".") {
-        path = QDir::currentPath();
+    if (directory.empty()) {
+        directory = fs::current_path();
     }
 
-    // creazione del file di output
-    QString outputFile = QDir(path).filePath(fi.completeBaseName() + outExtension);
+    fs::path outputFile = directory / (inputPath.stem().string() + outExtension);
 
-    options.outputFile = outputFile;
+    options.outputFile = outputFile.string();
 
     return;
 }
@@ -180,26 +182,28 @@ void deduceOutputFile(CompilerOptions& options, const QString& outExtension)
 
 bool CompilerDriver::validateOptions(CompilerOptions &options)
 {
-    QFile inputFile(options.inputFile);
-    if (!inputFile.exists()) {
+    std::ifstream inputFile(options.inputFile, std::ios::in);
+    if (!inputFile.is_open()) {
         reportCliError("input file does not exist: " + options.inputFile);
+        inputFile.close();
         return false;
     }
+    inputFile.close();
 
     switch (options.outkind)
     {
     case OutputKind::ObjectFile:
-        if (options.outputFile.isEmpty())
+        if (options.outputFile.empty())
         {
-            deduceOutputFile(options, QString(".o"));
+            deduceOutputFile(options, std::string(".o"));
             reportCliMsg("deduced output file path: " + options.outputFile);
         }
         break;
 
     case OutputKind::Executable:
-        if(options.outputFile.isEmpty())
+        if(options.outputFile.empty())
         {
-            deduceOutputFile(options, QString(".exe"));
+            deduceOutputFile(options, std::string(".exe"));
             reportCliMsg("deduced output file path: " + options.outputFile);
         }
         break;
@@ -217,13 +221,19 @@ bool CompilerDriver::validateOptions(CompilerOptions &options)
 
 int CompilerDriver::execute(const CompilerOptions &options)
 {
-    QFile file(options.inputFile);
-    if (!file.open(QIODevice::ReadOnly)) {
+    std::ifstream file(options.inputFile, std::ios::in);
+    if (!file.is_open()) {
         reportCliError("unable to open input file: " + options.inputFile);
         return 1;
     }
 
-    QString sourceCode = file.readAll().constData();
+    std::string sourceCode;
+    std::string line;
+
+    while(std::getline(file, line))
+    {
+        sourceCode.append(line);
+    }
 
     // Pipeline di compilazione
     bool good = compilePipeline(sourceCode, options);
@@ -243,7 +253,7 @@ int CompilerDriver::execute(const CompilerOptions &options)
  * sia rispettata, gestendo le componenti di compilazione del progetto.
  */
 
-bool CompilerDriver::compilePipeline(const QString &source, const CompilerOptions &options)
+bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOptions &options)
 {
     Lexer lexer;
     Parser parser;
@@ -252,7 +262,7 @@ bool CompilerDriver::compilePipeline(const QString &source, const CompilerOption
     CodeGenerator codegen;
 
     // Lettura e parsing del codice, indipendente dai flags
-    auto tokens = lexer.analiseString(source, errorLog);
+    const std::vector<Token> tokens = lexer.analiseString(source, errorLog);
 
     if(errorLog.hasErrors()) {
         reportCliError("lexer execution return error code: typo error");
@@ -325,8 +335,8 @@ bool CompilerDriver::compilePipeline(const QString &source, const CompilerOption
 
     // Opzioni di output kind
 
-    QFile out(options.outputFile);
-    if(!out.open(QIODevice::WriteOnly)) {
+    std::ifstream out(options.outputFile, std::ios::out);
+    if(!out.is_open()) {
         reportCliError("unable to create and open output file: " + options.outputFile);
         return false;
     }
@@ -336,12 +346,12 @@ bool CompilerDriver::compilePipeline(const QString &source, const CompilerOption
     {
     case OutputKind::Executable :
         {
-            QString tempObj = options.outputFile + ".obj"; // file oggetto temporaneo
+            std::string tempObj = options.outputFile + ".obj"; // file oggetto temporaneo
             codegen.buildTargetObj(tempObj, options.verbose);
 
             bool linked = codegen.link(tempObj, options.outputFile, options.verbose);
 
-            QFile::remove(tempObj); // rimozione del file oggetto utilizzato
+            fs::remove(tempObj);
 
             if (!linked) {
                 reportCliError("linker execution failed");
@@ -352,8 +362,6 @@ bool CompilerDriver::compilePipeline(const QString &source, const CompilerOption
         }
     case OutputKind::ObjectFile :
         codegen.buildTargetObj(options.outputFile, options.verbose);
-        // TODO modificare e dividere in sottofunzioni buildtargetobj, aggiungere opzioni di
-        // output condizionale per debug (--build-debug)
         break;
     }
 
