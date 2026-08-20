@@ -100,15 +100,15 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
     // Dichiarazione
     else if(auto s = dynamic_cast<const DeclarationStmt*>(stmt))
     {
+        if(s->type == ValueType::Void) { 
+            errorLog->addError("variable " + s->name + " declared void");
+            return;
+        }
+
         if(s->initializer)
         {
             //risultato dell'espressione in assegnazione, valore che si sta assegnando
             ExprAnalysisResult initResult = analyzeExpr(s->initializer.get());
-
-            if(s->type == ValueType::Void) {
-                errorLog->addError("variable declared void");
-                return;
-            }
 
             if (!Type::isAssignmentCompatible(s->type, initResult.value_type)) {
                 errorLog->addError("tipo incompatibile nell'inizializzazione di " + s->name + "  " +
@@ -322,12 +322,12 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     else if(auto s = dynamic_cast<const CallExpr*>(expr))
     {
         if(!functionTable.contains(s->name)) {
-            errorLog->addError(s->name + "was not declared in this scope");
+            errorLog->addError(s->name + " was not declared in this scope");
             return ExprAnalysisResult{ValueType::Error};
         }
 
         if(s->args.size() != functionTable[s->name].paramTypes.size()) {
-            errorLog->addError("errore #325 - callexpr in analyseExpr");
+            errorLog->addError("errore _#325 - callexpr in analyseExpr");
             return ExprAnalysisResult{ValueType::Error};
         }
 
@@ -335,7 +335,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
             auto res = analyzeExpr(s->args.at(i).get());
 
             if(!Type::isAssignmentCompatible(functionTable[s->name].paramTypes.at(i), res.value_type)) {
-                errorLog->addError("error#332 - callexpr in analyze expr");
+                errorLog->addError("error _#332 - callexpr in analyze expr");
                 return ExprAnalysisResult{ValueType::Error};
             }
         }

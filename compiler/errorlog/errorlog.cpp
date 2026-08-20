@@ -40,9 +40,8 @@ bool ErrorLog::hasErrors() const
 
 void ErrorLog::printErrors() const {
     for (const auto& err : errors) {
-        std::cout << "Error at line" << err.position.line
-                << "col" << err.position.column
-                << ":" << err.message << std::endl;
+        std::cout << "Error at line " << err.position.line << " col " << err.position.column 
+                  << ": " << err.message << std::endl;
     }
 }
 

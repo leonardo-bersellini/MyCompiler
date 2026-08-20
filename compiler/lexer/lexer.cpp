@@ -26,8 +26,8 @@ std::vector<Token> Lexer::analiseString(const std::string &string, ErrorLog &_er
     currentTextPos.column = 0;
     currentTextPos.line = 0;
 
-    removeAll(buffer, "\r");
-    removeAll(buffer, "\t");
+    //buffer = removeAll(buffer, "\r");
+    //buffer = removeAll(buffer, "\t");
 
     while(!isAtEnd())
     {
@@ -123,6 +123,7 @@ std::vector<Token> Lexer::analiseString(const std::string &string, ErrorLog &_er
                 m_tokens.push_back(t);
             } else {
                 //gestione &
+                advance();
             }
         }
         else if(c == '|') {
@@ -132,6 +133,7 @@ std::vector<Token> Lexer::analiseString(const std::string &string, ErrorLog &_er
                 m_tokens.push_back(t);
             } else {
                 //gestione |
+                advance();
             }
         }
         else if(c == '>') {
@@ -191,7 +193,8 @@ std::vector<Token> Lexer::analiseString(const std::string &string, ErrorLog &_er
             Token unknown = createToken(TokenType::Unknown);
             m_tokens.push_back(unknown);
 
-            errorLog->addError("Carattere non riconosciuto. char: " + c, currentTextPos);
+            std::string err = "Carattere non riconosciuto. char: " + c;
+            errorLog->addError(err, currentTextPos);
         }
     }
 

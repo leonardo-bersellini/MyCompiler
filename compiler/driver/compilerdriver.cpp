@@ -335,7 +335,7 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
 
     // Opzioni di output kind
 
-    std::ifstream out(options.outputFile, std::ios::out);
+    std::ifstream out(options.outputFile, std::ios::out | std::ios::binary);
     if(!out.is_open()) {
         reportCliError("unable to create and open output file: " + options.outputFile);
         return false;

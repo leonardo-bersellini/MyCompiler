@@ -495,6 +495,7 @@ void CodeGenerator::generateForStmt(const ForStmt *st)
     Builder.SetInsertPoint(condBB);
 
     //crea il ciclo come branch logica
+    //if(!st->condition) st->condition = 
     llvm::Value *condition = generateExpr(st->condition.get()).llvm_value;
     Builder.CreateCondBr(condition, bodyBB, afterBB);
 
