@@ -1,13 +1,14 @@
 #ifndef ABSTRACTSINTAXTREE_H
 #define ABSTRACTSINTAXTREE_H
 
-#include "token.h"
-#include "symbols.h"
 #include <memory>
 #include <vector>
-#include <QString>
-#include <QList>
-#include <QDebug>
+#include <string>
+#include <vector>
+#include <iostream>
+
+#include "token.h"
+#include "symbols.h"
 
 // Expressions - produce un valore
 
@@ -24,12 +25,12 @@ public:
 
 class StringExpr : public Expr {
 public:
-    QString value;
+    std::string value;
 };
 
 class CharExpr : public Expr {
 public:
-    QChar value;
+    char value;
 };
 
 class BooleanExpr : public Expr {
@@ -39,7 +40,7 @@ public:
 
 class VariableExpr : public Expr {
 public:
-    QString name;
+    std::string name;
 };
 
 class BinaryExpr : public Expr {
@@ -57,7 +58,7 @@ public:
 
 class CallExpr : public Expr { //chiamata ad una funzione
 public:
-    QString name;
+    std::string name;
     std::vector<std::unique_ptr<Expr>> args;
 };
 
@@ -75,7 +76,7 @@ public:
 
 class AssignmentStmt : public Stmt {
 public:
-    QString name;
+    std::string name;
     std::unique_ptr<Expr> value;
 };
 
@@ -87,7 +88,7 @@ public:
 class DeclarationStmt : public Stmt {
 public:
     ValueType type;
-    QString name;
+    std::string name;
     std::unique_ptr<Expr> initializer; //contiene le informazioni di un'eventuale inizializzazione
 };
 
@@ -132,12 +133,12 @@ public:
 
 struct FunctionParam {
     ValueType type;
-    QString name;
+    std::string name;
 };
 
 class FunctionStmt : public Stmt {
 public:
-    QString name;
+    std::string name;
     ValueType returnType;
     std::vector<FunctionParam> params;
     std::unique_ptr<Stmt> body; // BlockStmt
@@ -161,70 +162,69 @@ public:
 // Funzioni di Debug
 
 inline void printAST(const Expr* node, int depth = 0) {
-    QString indent(depth * 2, ' ');
+    std::string indent(depth * 2, ' ');
 
     if (auto n = dynamic_cast<const NumberExpr*>(node)) {
-        qDebug().noquote() << indent << "NumberExpr:" << n->value;
+        std::cout << indent << "NumberExpr:" << n->value << std::endl;
     }
     else if (auto n = dynamic_cast<const StringExpr*>(node)) {
-        qDebug().noquote() << indent << "StringExpr:" << "\"" + n->value + "\"";
+        std::cout << indent << "StringExpr:" << "\"" + n->value + "\"" << std::endl;
     }
     else if (auto n = dynamic_cast<const CharExpr*>(node)) {
-        qDebug().noquote() << indent << "CharExpr:" << n->value;
+        std::cout << indent << "CharExpr:" << n->value << std::endl;
     }
     else if (auto n = dynamic_cast<const BooleanExpr*>(node)) {
-        qDebug().noquote() << indent << "BooleanExpr:" << (n->value ? "true" : "false");
+        std::cout << indent << "BooleanExpr:" << (n->value ? "true" : "false") << std::endl;
     }
     else if (auto n = dynamic_cast<const VariableExpr*>(node)) {
-        qDebug().noquote() << indent << "VariableExpr:" << n->name;
+        std::cout << indent << "VariableExpr:" << n->name << std::endl;
     }
     else if (auto n = dynamic_cast<const UnaryExpr*>(node)) {
-        qDebug().noquote() << indent << "UnaryExpr:" << typeToString(n->op);
+        std::cout << indent << "UnaryExpr:" << typeToString(n->op) << std::endl;
         printAST(n->operand.get(), depth + 1);
     }
     else if (auto n = dynamic_cast<const BinaryExpr*>(node)) {
-        qDebug().noquote() << indent << "BinaryExpr:" << typeToString(n->op);
+        std::cout << indent << "BinaryExpr:" << typeToString(n->op) << std::endl;
         printAST(n->left.get(), depth + 1);
         printAST(n->right.get(), depth + 1);
     }
     else if (auto n = dynamic_cast<const CallExpr*>(node)) {
-        qDebug().noquote() << indent << "CallExpr:" << n->name;
+        std::cout << indent << "CallExpr:" << n->name << std::endl;
 
         for (const auto& arg : n->args)
             printAST(arg.get(), depth + 1);
     }
     else if (dynamic_cast<const ErrorExpr*>(node)) {
-        qDebug().noquote() << indent << "ErrorExpr";
+        std::cout << indent << "ErrorExpr" << std::endl;
     }
     else {
-        qDebug().noquote() << indent << "Unknown Expr";
+        std::cout << indent << "Unknown Expr" << std::endl;
     }
 }
 
 inline void printStmt(const Stmt* stmt, int depth = 0) {
     if (!stmt) {
-        qDebug().noquote() << QString(depth * 2, ' ') + "<null stmt>";
+        std::cout << std::string(depth * 2, ' ') + "<null stmt>" << std::endl;
         return;
     }
 
-    QString indent(depth * 2, ' ');
+    std::string indent(depth * 2, ' ');
 
     if (auto s = dynamic_cast<const AssignmentStmt*>(stmt)) {
 
-        qDebug().noquote() << indent << "AssignmentStmt:" << s->name;
+        std::cout << indent << "AssignmentStmt:" << s->name << std::endl;
         printAST(s->value.get(), depth + 1);
     }
 
     else if (auto s = dynamic_cast<const ExpressionStmt*>(stmt)) {
 
-        qDebug().noquote() << indent << "ExpressionStmt";
+        std::cout << indent << "ExpressionStmt" << std::endl;
         printAST(s->expr.get(), depth + 1);
     }
 
     else if (auto s = dynamic_cast<const DeclarationStmt*>(stmt)) {
 
-        qDebug().noquote() << indent << "DeclarationStmt:"
-                           << s->name;
+        std::cout << indent << "DeclarationStmt:" << s->name << std::endl;
 
         if (s->initializer)
             printAST(s->initializer.get(), depth + 1);
@@ -232,7 +232,7 @@ inline void printStmt(const Stmt* stmt, int depth = 0) {
 
     else if (auto s = dynamic_cast<const BlockStmt*>(stmt)) {
 
-        qDebug().noquote() << indent << "BlockStmt";
+        std::cout << indent << "BlockStmt" << std::endl;
 
         for (const auto& st : s->statements)
             printStmt(st.get(), depth + 1);
@@ -240,70 +240,69 @@ inline void printStmt(const Stmt* stmt, int depth = 0) {
 
     else if (auto s = dynamic_cast<const IfStmt*>(stmt)) {
 
-        qDebug().noquote() << indent << "IfStmt";
+        std::cout << indent << "IfStmt";
 
-        qDebug().noquote() << QString((depth + 1) * 2, ' ') << "Condition:";
+        std::cout << std::string((depth + 1) * 2, ' ') << "Condition:" << std::endl;
         printAST(s->condition.get(), depth + 2);
 
-        qDebug().noquote() << QString((depth + 1) * 2, ' ') << "Then:";
+        std::cout << std::string((depth + 1) * 2, ' ') << "Then:" << std::endl;
         printStmt(s->thenBranch.get(), depth + 2);
 
         if (s->elseBranch) {
-            qDebug().noquote() << QString((depth + 1) * 2, ' ') << "Else:";
+            std::cout << std::string((depth + 1) * 2, ' ') << "Else:" << std::endl;
             printStmt(s->elseBranch.get(), depth + 2);
         }
     }
 
     else if (auto s = dynamic_cast<const WhileStmt*>(stmt)) {
 
-        qDebug().noquote() << indent << "WhileStmt";
+        std::cout << indent << "WhileStmt" << std::endl;
 
-        qDebug().noquote() << QString((depth + 1) * 2, ' ') << "Condition:";
+        std::cout << std::string((depth + 1) * 2, ' ') << "Condition:" << std::endl;
         printAST(s->condition.get(), depth + 2);
 
-        qDebug().noquote() << QString((depth + 1) * 2, ' ') << "Body:";
+        std::cout << std::string((depth + 1) * 2, ' ') << "Body:" << std::endl;
         printStmt(s->body.get(), depth + 2);
     }
 
     else if (auto s = dynamic_cast<const ForStmt*>(stmt)) {
 
-        qDebug().noquote() << indent << "ForStmt";
+        std::cout << indent << "ForStmt" << std::endl;
 
         if (s->init) {
-            qDebug().noquote() << QString((depth + 1) * 2, ' ') << "Init:";
+            std::cout << std::string((depth + 1) * 2, ' ') << "Init:" << std::endl;
             printStmt(s->init.get(), depth + 2);
         }
 
         if (s->condition) {
-            qDebug().noquote() << QString((depth + 1) * 2, ' ') << "Condition:";
+            std::cout << std::string((depth + 1) * 2, ' ') << "Condition:" << std::endl;
             printAST(s->condition.get(), depth + 2);
         }
 
         if (s->update) {
-            qDebug().noquote() << QString((depth + 1) * 2, ' ') << "Update:";
+            std::cout << std::string((depth + 1) * 2, ' ') << "Update:" << std::endl;
             printAST(s->update.get(), depth + 2);
         }
 
         if (s->body) {
-            qDebug().noquote() << QString((depth + 1) * 2, ' ') << "Body:";
+            std::cout << std::string((depth + 1) * 2, ' ') << "Body:" << std::endl;
             printStmt(s->body.get(), depth + 2);
         }
     }
 
     else if (auto s = dynamic_cast<const FunctionStmt*>(stmt)) {
 
-        qDebug().noquote() << indent << "FunctionStmt:" << s->name;
+        std::cout << indent << "FunctionStmt:" << s->name << std::endl;
 
         for (const auto& p : s->params)
-            qDebug().noquote() << QString((depth + 1) * 2, ' ')
-                               << "Param:" << p.name;
+            std::cout << std::string((depth + 1) * 2, ' ') << "Param:" << p.name << std::endl;
 
         printStmt(s->body.get(), depth + 1);
     }
 
     else if (auto s = dynamic_cast<const ReturnStmt*>(stmt)) {
 
-        qDebug().noquote() << indent << "ReturnStmt";
+        std::cout << indent << "ReturnStmt" << std::endl;
 
         if (s->value)
             printAST(s->value.get(), depth + 1);
@@ -311,22 +310,22 @@ inline void printStmt(const Stmt* stmt, int depth = 0) {
 
     else if (dynamic_cast<const BreakStmt*>(stmt)) {
 
-        qDebug().noquote() << indent << "BreakStmt";
+        std::cout << indent << "BreakStmt" << std::endl;
     }
 
     else if (dynamic_cast<const ContinueStmt*>(stmt)) {
 
-        qDebug().noquote() << indent << "ContinueStmt";
+        std::cout << indent << "ContinueStmt" << std::endl;
     }
 
     else if (dynamic_cast<const ErrorStmt*>(stmt)) {
 
-        qDebug().noquote() << indent << "ErrorStmt";
+        std::cout << indent << "ErrorStmt" << std::endl;
     }
 
     else {
 
-        qDebug().noquote() << indent << "Unknown Stmt";
+        std::cout << indent << "Unknown Stmt" << std::endl;
     }
 }
 

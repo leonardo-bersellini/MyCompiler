@@ -1,6 +1,6 @@
 # Bismuth Compiler
 
-> Bismuth Compiler — a hobby compiler written in C++ with Qt and LLVM, from lexer to object file.
+> Bismuth Compiler — a hobby compiler written in C++ and LLVM, from lexer to object file.
 
 This compiler does not aim to be a good tool to compile C++ or to replace any other existing program.
 It is only a stand-alone project built as a personal learning project, to explore compiler design and LLVM from the ground up.
@@ -13,7 +13,7 @@ Go to the "Quick Start" section to try the compiler, or read the code and let us
 
 ## Overview
 
-Bismuth is a personal compiler written from scratch in C++, using Qt as a support framework and LLVM as the code generation backend. The project is built by a self-taught programmer, with the goal of publicly showcasing the code and gaining hands-on experience building a complete compiler — from tokenization to the production of an object file.
+Bismuth is a personal compiler written from scratch in C++, using LLVM as backend code-generator. The project is built by a self-taught programmer, with the goal of publicly showcasing the code and gaining hands-on experience building a complete compiler — from tokenization to the production of an object file.
 
 It is not intended as a production-ready language, but as a learning path through compiler architecture, syntactic/semantic analysis, and code generation via LLVM.
 

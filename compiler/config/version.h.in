@@ -1,0 +1,10 @@
+#ifndef VERSION_H
+#define VERSION_H
+
+/* queste costanti verranno sostituite da cmake con i valori impostati nel cmakelists */
+
+constexpr const char* APP_VERSION = "@PROJECT_VERSION@";
+
+constexpr const char* APP_DESCRIPTION = "@PROJECT_DESCRIPTION@";
+
+#endif // VERSION_H

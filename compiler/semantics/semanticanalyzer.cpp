@@ -1,5 +1,7 @@
 #include "semanticanalyzer.h"
 
+#include <unordered_map>
+
 SemanticAnalyzer::SemanticAnalyzer()
 {
 }
@@ -18,7 +20,7 @@ void SemanticAnalyzer::analyzeProgram(const Program &program, ErrorLog &errorLog
     this->currentFunction = nullptr;
     this->loopDepth = 0;
 
-    this->scopeStack.append(QMap<QString, SymbolInfo>()); //scope globale
+    this->scopeStack.push_back(std::unordered_map<std::string, SymbolInfo>()); //scope globale
 
     for(const auto& st : program.statements) {
         analyzeStmt(st.get());
@@ -138,7 +140,7 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
         }
 
         // --- insert nella tabella --- //
-        functionTable.insert(s->name, FunctionInfo{s->returnType, paramsType});
+        functionTable.insert({s->name, FunctionInfo{s->returnType, paramsType}});
 
         // --- analisi del codice della funzione --- //
         pushScope();
@@ -404,7 +406,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeBinaryOperation(const BinaryExpr *ex
  * presenti.
  */
 
-bool SemanticAnalyzer::symbolExistsAnywhere(const QString &name) const {
+bool SemanticAnalyzer::symbolExistsAnywhere(const std::string &name) const {
     for(int i= scopeStack.size() -1; i >= 0; i--) {
         if(scopeStack[i].contains(name)) return true;
     }
@@ -417,8 +419,8 @@ bool SemanticAnalyzer::symbolExistsAnywhere(const QString &name) const {
  * corrisponde all'ultimo scope della lista.
  */
 
-bool SemanticAnalyzer::symbolExistsInCurrentScope(const QString &name) const {
-    if(scopeStack.last().contains(name))
+bool SemanticAnalyzer::symbolExistsInCurrentScope(const std::string &name) const {
+    if(scopeStack.back().contains(name))
         return true;
     else
         return false;
@@ -430,9 +432,9 @@ bool SemanticAnalyzer::symbolExistsInCurrentScope(const QString &name) const {
  * le informazioni di quel simbolo.
  */
 
-SymbolInfo SemanticAnalyzer::lookupSymbolInfo(const QString &name) const {
+SymbolInfo SemanticAnalyzer::lookupSymbolInfo(const std::string &name) const {
     for(int i = scopeStack.size() - 1; i >= 0; i--) {
-        if (scopeStack[i].contains(name)) return scopeStack[i].value(name);
+        if (scopeStack[i].contains(name)) return scopeStack[i].at(name);
     }
     return SymbolInfo{ValueType::Error}; // non trovato
 }
@@ -443,19 +445,19 @@ SymbolInfo SemanticAnalyzer::lookupSymbolInfo(const QString &name) const {
  * corrisponde all'ultimo della lista.
  */
 
-void SemanticAnalyzer::declareSymbol(const QString &name, SymbolInfo info) {
-    scopeStack.last().insert(name, info);
+void SemanticAnalyzer::declareSymbol(const std::string &name, SymbolInfo info) {
+    scopeStack.back().insert({name, info});
 }
 
 /*
  * Funzione dello stackScope.
- * Esegue il push sullo stackscope, ovvero aggiunge un nuovo scope (QMap<QString, SymbolInfo)
- * all'interno della lista.
+ * Esegue il push sullo stackscope, ovvero aggiunge un nuovo 
+ * scope (std::unordered_map<std::string, SymbolInfo) all'interno della lista.
  * Lo scope aggiunto è una mappa vuota.
  */
 
 void SemanticAnalyzer::pushScope() {
-    scopeStack.append(QMap<QString, SymbolInfo>());
+    scopeStack.push_back(std::unordered_map<std::string, SymbolInfo>());
 }
 
 /*
@@ -464,7 +466,7 @@ void SemanticAnalyzer::pushScope() {
  */
 
 void SemanticAnalyzer::popScope() {
-    scopeStack.removeLast();
+    scopeStack.pop_back();
 }
 
 

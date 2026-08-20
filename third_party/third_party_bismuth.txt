@@ -1,0 +1,21 @@
+
+ # MinGW (ucrt64) build dependencies
+
+ libgcc_s_seh-1.dll
+ lidstdc++-6.dll
+ libwinpthread-1.dll
+
+ # LLD.exe lib dependencies
+ 
+ crt2.o
+ libadvapi32.a
+ libgcc.a
+ libgcc_eh.a
+ libkernel32.a
+ libmingw32.a
+ libmingwex.a
+ libmoldname.a
+ libshell32.a
+ libucrt.a
+ libuser32.a
+

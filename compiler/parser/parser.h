@@ -1,7 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include <QList>
+#include <vector>
 #include <memory>
 
 #include "token.h"
@@ -15,10 +15,10 @@ class Parser
 public:
     Parser();
 
-    std::unique_ptr<Program> parseProgram(const QList<Token> &tokens, ErrorLog& errorLog);
+    std::unique_ptr<Program> parseProgram(const std::vector<Token> &tokens, ErrorLog& errorLog);
 
 private:
-    QList<Token> tokens;
+    std::vector<Token> tokens;
     int currentPos; //indice del token corrente
     ErrorLog* errorLog;
 

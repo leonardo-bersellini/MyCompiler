@@ -1,8 +1,8 @@
 #ifndef SEMANTICANALYZER_H
 #define SEMANTICANALYZER_H
 
-#include <QMap>
-#include <QString>
+#include <unordered_map>
+#include <string>
 
 #include "symbols.h"
 #include "AbstractSintaxTree.h"
@@ -22,9 +22,9 @@ public:
     void analyzeProgram(const Program& program, ErrorLog& errorLog);
 
 private:
-    QList<QMap<QString, SymbolInfo>> scopeStack; // Permette una lista di scope diversi, insieme di tabelle dei simboli
+    std::vector<std::unordered_map<std::string, SymbolInfo>> scopeStack; // Permette una lista di scope diversi, insieme di tabelle dei simboli
 
-    QMap<QString, FunctionInfo> functionTable;     // Tabella delle funzioni dichiarate
+    std::unordered_map<std::string, FunctionInfo> functionTable;     // Tabella delle funzioni dichiarate
     const FunctionInfo* currentFunction = nullptr; // Funzione corrente (se esiste)
 
     ErrorLog* errorLog;
@@ -36,10 +36,10 @@ private:
 
     ExprAnalysisResult analyzeBinaryOperation(const BinaryExpr* expr);
 
-    bool symbolExistsAnywhere(const QString& name) const;
-    bool symbolExistsInCurrentScope(const QString& name) const;
-    SymbolInfo lookupSymbolInfo(const QString& name) const;
-    void declareSymbol(const QString& name, SymbolInfo info);
+    bool symbolExistsAnywhere(const std::string& name) const;
+    bool symbolExistsInCurrentScope(const std::string& name) const;
+    SymbolInfo lookupSymbolInfo(const std::string& name) const;
+    void declareSymbol(const std::string& name, SymbolInfo info);
     void pushScope();
     void popScope();
 };
