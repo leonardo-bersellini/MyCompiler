@@ -281,7 +281,11 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt()
     {
         // --- Dichiarazione pura --- //
         std::string type = advance().lexeme;  //consuma TypeKeyword
-        std::string name = advance().lexeme;   // consuma Identifier
+
+        std::string name = peek().lexeme;     // legge Identifier
+        bool isValid = expect(TokenType::Identifier);
+        if(!isValid) return std::make_unique<ErrorStmt>();
+
         expect(TokenType::Semicolon);
 
         auto d = std::make_unique<DeclarationStmt>();
@@ -301,7 +305,11 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt()
 std::unique_ptr<Stmt> Parser::parseFunctionStmt()
 {
     ValueType returnType = Type::toValueType(advance().lexeme); // consuma tipo di ritorno
-    std::string identifier = advance().lexeme; // consuma nome funzione
+    std::string identifier = peek().lexeme; // consuma nome funzione
+    bool valid = expect(TokenType::Identifier);
+
+    if(returnType == ValueType::Error) errorLog->addError("error: returning <errortype> in function: " + identifier);
+    if(!valid) return std::make_unique<ErrorStmt>();
 
     expect(TokenType::LParen);
 
@@ -348,7 +356,7 @@ std::unique_ptr<Stmt> Parser::parseReturnStmt()
         advance();
     } else {
         r->value = parseExpr();
-        advance(); //consuma ;
+        expect(TokenType::Semicolon); //consuma ;
     }
 
     return r;
