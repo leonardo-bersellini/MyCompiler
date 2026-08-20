@@ -62,10 +62,9 @@ It is not intended as a production-ready language, but as a learning path throug
 - No particular requirements — the necessary linker is already included in the with all the lib files
 
 **To build from source / contribute**
-- Qt6
 - LLVM 18.1.8
 - CMake ≥ 3.16
-- C++17 compiler (MinGW/UCRT64)
+- C++20 compiler (MinGW/UCRT64)
 
 ---
 
@@ -104,19 +103,21 @@ compiler/
 ├── lexer/
 ├── parser/
 └── semantics/
+
+third-party/
+├── mingw/
+└── lld-libs/
 ```
 
 **Installed release structure**
 ```
 <prefix>/
 bin/            
-├── bismuth.exe             # the compiler executable
-├── Qt6 dll                 # qt dll and dependencies
-|
-└── lld/                    # contains the linker and all of its dependencies
-    ├── lld-link.exe
-    └── libs/
-        └── lib files (.a, .dll, .o)  
+├── bismuth.exe             # the compiler executable 
+|                           # there will also be included mingw runtime dlls
+├── lld-link.exe
+└── libs/                   # lld dependencies
+    └── lib files (.a, .dll, .o)  
 ```
 
 ---
@@ -152,7 +153,6 @@ This attribution is requested to preserve the connection with the original Bismu
 Bismuth uses third-party software, including:
 
 - **LLVM** — Apache License 2.0 with LLVM Exceptions
-- **Qt 6** — licensed under the applicable GNU LGPL/GPL terms
 - **MSYS2** — packages are distributed under their respective licenses
 
 Third-party software remains subject to its own license terms.
