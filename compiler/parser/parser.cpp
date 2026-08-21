@@ -712,6 +712,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
         auto call = std::make_unique<CallExpr>();
 
         call->name = advance().lexeme;
+        expect(TokenType::LParen);
 
         std::vector<std::unique_ptr<Expr>> args;
 
@@ -722,6 +723,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
             if(check(TokenType::Comma))
                 advance(); // consuma ',' se c'è un altro argomento
         }
+        expect(TokenType::RParen);
 
         call->args = std::move(args);
         return call;

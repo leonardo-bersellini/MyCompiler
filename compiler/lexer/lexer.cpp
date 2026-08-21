@@ -26,8 +26,8 @@ std::vector<Token> Lexer::analiseString(const std::string &string, ErrorLog &_er
     currentTextPos.column = 0;
     currentTextPos.line = 0;
 
-    //buffer = removeAll(buffer, "\r");
-    //buffer = removeAll(buffer, "\t");
+    buffer = removeAll(buffer, "\r");
+    buffer = removeAll(buffer, "\t");
 
     while(!isAtEnd())
     {
