@@ -120,6 +120,7 @@ void CodeGenerator::buildTargetObj(const std::string& target_path, bool debug)
  * Questa funzione si occupa di utilizzare il linker del progetto per costruire un eseguibile,
  * linkando i file oggetto indicati.
  * Si utilizza il linker lld-link.exe di msys64-ucrt64
+ * il flag debug è impostato nella chiamata da parte di compilerdriver. (in base alle opzioni verbose).
  */
 
 bool CodeGenerator::link(const std::string &objFile, const std::string &outputExe, bool debug)
@@ -137,6 +138,7 @@ bool CodeGenerator::link(const std::string &objFile, const std::string &outputEx
         objFile,
         "-out:" + outputExe,
         "-subsystem:console",
+        "-libpath:" + libDir,
         "crt2.o",
         "libmingw32.a",
         "libgcc.a",
@@ -150,12 +152,16 @@ bool CodeGenerator::link(const std::string &objFile, const std::string &outputEx
         "libkernel32.a"
     };
 
-    std::cout << "linker path: " << linkerPath << std::endl;
-    std::cout << "exists: " << std::filesystem::exists(linkerPath) << std::endl;
+    if(debug) {
+        std::cout << "linker path: " << linkerPath << std::endl;
+        std::cout << "exists: " << std::filesystem::exists(linkerPath) << std::endl;
+    }
 
     std::string cmd = linkerPath;
     for (const auto& a : args) cmd += " " + a;
     cmd += " 2>&1";
+
+    if(debug) std::cout << "executing command: " << cmd << std::endl;
 
     FILE* pipe = popen(cmd.c_str(), "r");
     std::string output;
