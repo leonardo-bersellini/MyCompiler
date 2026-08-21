@@ -232,7 +232,7 @@ int CompilerDriver::execute(const CompilerOptions &options)
 
     while(std::getline(file, line))
     {
-        sourceCode.append(line);
+        sourceCode.append(line + "\n");
     }
 
     // Pipeline di compilazione
@@ -284,6 +284,16 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
 
         if(options.verbose) {
             errorLog.printErrors();
+//da rimuovere
+            reportCliMsg("\nSource text: " + source);
+
+        lexer.printTokens();
+
+        reportCliMsg("\nProgram statements:\n");
+        for (const auto& stmt : program->statements) {
+            printStmt(stmt.get());
+        }
+//fino a qui
         }
         if(options.emitIR) {
             reportCliError("could not solve specified options for compiler execution [code-steps-not-generated]");
@@ -335,7 +345,7 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
 
     // Opzioni di output kind
 
-    std::ifstream out(options.outputFile, std::ios::out | std::ios::binary);
+    std::ofstream out(options.outputFile, std::ios::out | std::ios::binary);
     if(!out.is_open()) {
         reportCliError("unable to create and open output file: " + options.outputFile);
         return false;
