@@ -31,7 +31,10 @@ configure_file(
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
 
-set(LLVM_DIR "C:/llvm-install/lib/cmake/llvm")
+if(NOT LLVM_DIR)
+    set(LLVM_DIR "C:/llvm-install/lib/cmake/llvm" CACHE PATH "C:/llvm-install/lib/cmake/llvm/LLVMConfig.cmake")
+endif()
+
 find_package(LLVM REQUIRED CONFIG)
 
 

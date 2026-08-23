@@ -75,8 +75,25 @@ It is not intended as a production-ready language, but as a learning path throug
 
 Go to the release section and select a version-release, then download and exctract the packages to use the compiler.
 
-From this repository: `Releases` > `Bismuth Vx.x.x` > `Download zip`
+From this repository: `Releases` > `Bismuth Vx.x.x` > `bismuth-Vx.x.x-win64.zip`
 
+---
+
+**Build from source**
+
+If you prefer to build this project from source, you can use cmake.
+
+Download the repository source code from: `Code` > `Download zip`
+
+Then build with cmake:
+
+```
+cmake -B build -DLLVM_DIR="/path/to/llvm-install/lib/cmake/llvm"
+cmake --build build
+```
+
+Note: llvm is not included in this repository, so you need to build it from source and include it
+in the cmake-prefix-path using the path on your device.
 
 ---
 
