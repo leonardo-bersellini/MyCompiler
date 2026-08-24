@@ -2,8 +2,10 @@
 
 #include <iostream>
 #include <cctype>
+#include <string>
 
 #include "keywords.h"
+#include "utils/ansi.h"
 
 Lexer::Lexer() {}
 
@@ -193,7 +195,9 @@ std::vector<Token> Lexer::analiseString(const std::string &string, ErrorLog &_er
             Token unknown = createToken(TokenType::Unknown);
             m_tokens.push_back(unknown);
 
-            std::string err = "Carattere non riconosciuto. char: " + c;
+            std::string err = std::string("Carattere non riconosciuto. char: ");
+            err.push_back(c);
+            
             errorLog->addError(err, currentTextPos);
         }
     }
@@ -213,9 +217,12 @@ std::vector<Token> Lexer::analiseString(const std::string &string, ErrorLog &_er
 void Lexer::printTokens()
 {
     std::cout << "\nProgram Tokens:\n" << std::endl;
+    std::cout << ansi::color::bright_black;
+
     for(Token& t : m_tokens){
         std::cout << typeToString(t.type) << std::endl;
     }
+    std::cout << ansi::color::reset;
 }
 
 /*

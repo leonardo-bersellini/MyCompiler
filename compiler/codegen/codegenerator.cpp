@@ -11,6 +11,9 @@
 #include <filesystem>
 #include <windows.h>
 
+#include "utils/ansi.h"
+namespace clr = ansi::color;
+
 /**
  * CODE GENERATION
  * Il codice viene generato utilizzando il framework llvm.
@@ -37,8 +40,11 @@ CodeGenerator::CodeGenerator()
 void CodeGenerator::emitIR()
 {
     std::cout << "\nIR [llvm-generated]:" << std::endl;
-    std::cout << "Module status: " << llvm::verifyModule(*Module, &llvm::errs()) << std::endl;
+    std::cout << "> module status: " << llvm::verifyModule(*Module, &llvm::errs()) << std::endl;
+    
+    std::cout << ansi::color::bright_black;
     Module->print(llvm::outs(), nullptr);
+    std::cout << ansi::color::reset;
 }
 
 /*
@@ -60,7 +66,7 @@ void CodeGenerator::buildTargetObj(const std::string& target_path, bool debug)
     auto TargetTriple = llvm::sys::getDefaultTargetTriple();
 
     if (llvm::verifyModule(*Module, &llvm::errs())) {
-        llvm::errs() << "Modulo LLVM invalido\n";
+        llvm::errs() << clr::red << "Modulo LLVM invalido\n" << clr::reset;
         return;
     }
     Module->setTargetTriple(TargetTriple);
@@ -70,7 +76,7 @@ void CodeGenerator::buildTargetObj(const std::string& target_path, bool debug)
     auto Target = llvm::TargetRegistry::lookupTarget(TargetTriple, Error);
 
     if (!Target) {
-        llvm::errs() << Error;
+        llvm::errs() << clr::red << Error << clr::reset;
         return;
     }
 
@@ -79,7 +85,7 @@ void CodeGenerator::buildTargetObj(const std::string& target_path, bool debug)
 
     auto TargetMachine = Target->createTargetMachine(TargetTriple, "x86-64", "", opt, RM);
     if (!TargetMachine) {
-        llvm::errs() << "Impossibile creare TargetMachine\n";
+        llvm::errs() << clr::red << "Impossibile creare TargetMachine\n" << clr::reset;
         return;
     }
 
@@ -90,14 +96,16 @@ void CodeGenerator::buildTargetObj(const std::string& target_path, bool debug)
 
     llvm::raw_fd_ostream dest(target_path, EC, llvm::sys::fs::OF_None);
     if (EC) {
+        std::cout << clr::red;
         std::cout << "Errore apertura file:" << EC.message() << std::endl;
+        std::cout << clr::reset;
         return;
     }
     llvm::legacy::PassManager pass;
 
     if (TargetMachine->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile))
     {
-        llvm::errs() << "Cannot emit object file\n";
+        llvm::errs() << clr::red << "Cannot emit object file\n" << clr::reset;
         return;
     }
 
@@ -106,12 +114,14 @@ void CodeGenerator::buildTargetObj(const std::string& target_path, bool debug)
 
     if(!debug) return;
 
-    std::cout << "\nDebug info:" << std::endl;
+    std::cout << "\nDebug info:";
+
+    std::cout << clr::bright_black << std::endl;
     std::cout << "Target triple:" << TargetTriple << std::endl;
     std::cout << "Numero funzioni nel modulo:" << Module->size() << std::endl;
     std::cout << "dest.has_error():" << dest.has_error() << std::endl;
 
-    std::cout << std::endl;
+    std::cout << clr::reset << std::endl;
 
     return;
 }
@@ -153,7 +163,7 @@ bool CodeGenerator::link(const std::string &objFile, const std::string &outputEx
     };
 
     if(debug) {
-        std::cout << "linker path: " << linkerPath << std::endl;
+        std::cout << "linker path: " << clr::bright_black << linkerPath << clr::reset << std::endl;
         std::cout << "exists: " << std::filesystem::exists(linkerPath) << std::endl;
     }
 
@@ -161,7 +171,7 @@ bool CodeGenerator::link(const std::string &objFile, const std::string &outputEx
     for (const auto& a : args) cmd += " " + a;
     cmd += " 2>&1";
 
-    if(debug) std::cout << "executing command: " << cmd << std::endl;
+    if(debug) std::cout << "executing command: " << clr::bright_black << cmd << clr::reset << std::endl;
 
     FILE* pipe = popen(cmd.c_str(), "r");
     std::string output;
@@ -175,7 +185,7 @@ bool CodeGenerator::link(const std::string &objFile, const std::string &outputEx
     }
 
     if(debug) {
-        std::cout << "linker: lld-link.exe [msys64-ucrt64]\n" << std::endl;
+        std::cout << "linker: " << clr::bright_black << "lld-link.exe [msys64-ucrt64]\n" << clr::reset << std::endl;
         std::cout << "linker exit code: " << exitCode  << std::endl;
     }
 

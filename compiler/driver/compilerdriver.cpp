@@ -5,8 +5,6 @@
 #include <fstream>
 #include <filesystem>
 
-namespace fs = std::filesystem;
-
 #include "lexer/lexer.h"
 #include "parser/parser.h"
 #include "semantics/semanticanalyzer.h"
@@ -14,8 +12,12 @@ namespace fs = std::filesystem;
 #include "codegen/codegenerator.h"
 
 #include "commandlineparser/commandlineparser.h"
+#include "utils/ansi.h"
 
 #include "version.h" //generato da cmake
+
+namespace fs = std::filesystem;
+namespace clr = ansi::color;
 
 /**
  * COMPILER DRIVER
@@ -30,7 +32,7 @@ namespace fs = std::filesystem;
 
 void CompilerDriver::reportCliError(const std::string &message) const
 {
-    std::cerr << "error: " << message << std::endl;
+    std::cerr << ansi::color::red << "error: " << message << ansi::color::reset << std::endl;
 }
 
 /*
@@ -52,6 +54,7 @@ void CompilerDriver::reportCliMsg(const std::string &message) const
 
 int CompilerDriver::run(int argc, char* argv[])
 {
+    ansi::enableAnsi();
     initCommandLineParser();
 
     CompilerOptions options;
@@ -284,16 +287,6 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
 
         if(options.verbose) {
             errorLog.printErrors();
-//da rimuovere
-            reportCliMsg("\nSource text: " + source);
-
-        lexer.printTokens();
-
-        reportCliMsg("\nProgram statements:\n");
-        for (const auto& stmt : program->statements) {
-            printStmt(stmt.get());
-        }
-//fino a qui
         }
         if(options.emitIR) {
             reportCliError("could not solve specified options for compiler execution [code-steps-not-generated]");
@@ -328,11 +321,11 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
     }
     else if(options.verbose)
     {
-        reportCliMsg("\nSource text: " + source);
+        reportCliMsg("\nsource text:\n" + clr::bright_black + source + clr::reset);
 
         lexer.printTokens();
 
-        reportCliMsg("\nProgram statements:\n");
+        reportCliMsg("\nprogram statements:\n");
         for (const auto& stmt : program->statements) {
             printStmt(stmt.get());
         }
@@ -356,7 +349,7 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
     {
     case OutputKind::Executable :
         {
-            std::string tempObj = options.outputFile + ".obj"; // file oggetto temporaneo
+            std::string tempObj = options.outputFile + ".o"; // file oggetto temporaneo
             codegen.buildTargetObj(tempObj, options.verbose);
 
             bool linked = codegen.link(tempObj, options.outputFile, options.verbose);

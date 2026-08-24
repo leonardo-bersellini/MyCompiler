@@ -10,6 +10,9 @@
 #include "token.h"
 #include "symbols.h"
 
+#include "utils/ansi.h"
+
+
 // Expressions - produce un valore
 
 class Expr {
@@ -202,7 +205,10 @@ inline void printAST(const Expr* node, int depth = 0) {
     }
 }
 
-inline void printStmt(const Stmt* stmt, int depth = 0) {
+inline void printStmt(const Stmt* stmt, int depth = 0) 
+{
+    std::cout << ansi::color::bright_black;
+
     if (!stmt) {
         std::cout << std::string(depth * 2, ' ') + "<null stmt>" << std::endl;
         return;
@@ -327,6 +333,8 @@ inline void printStmt(const Stmt* stmt, int depth = 0) {
 
         std::cout << indent << "Unknown Stmt" << std::endl;
     }
+
+    std::cout << ansi::color::reset;
 }
 
 #endif // ABSTRACTSINTAXTREE_H

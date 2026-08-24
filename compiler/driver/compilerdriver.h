@@ -26,13 +26,12 @@ private:
     CommandLineParser parser;
     void initCommandLineParser();
 
+    void reportCliError(const std::string &message) const;
+    void reportCliMsg(const std::string &message) const;
+
     bool parseArguments(int argc, char* argv[], CompilerOptions &options);
     bool validateOptions(CompilerOptions &options);
     int execute(const CompilerOptions &options);
-
-    void printUsage() const;
-    void reportCliError(const std::string &message) const;
-    void reportCliMsg(const std::string &message) const;
 
     bool compilePipeline(const std::string& source, const CompilerOptions &options);
 };

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(MyCompiler 
-    VERSION 1.0.2 
+    VERSION 1.1.2 
     LANGUAGES CXX
     DESCRIPTION "Bismuth: compilatore sviluppato in C++ e LLVM"
 )
@@ -54,6 +54,7 @@ add_executable(Bismuth
   compiler/lexer/lexer.cpp compiler/lexer/lexer.h
   compiler/parser/parser.cpp compiler/parser/parser.h
   compiler/semantics/semanticanalyzer.cpp compiler/semantics/semanticanalyzer.h
+  compiler/utils/ansi.h compiler/utils/ansi.cpp
 
 )
 target_link_libraries(Bismuth PRIVATE Qt${QT_VERSION_MAJOR}::Core ${LLVM_LIBS})

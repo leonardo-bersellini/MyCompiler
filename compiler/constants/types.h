@@ -47,7 +47,7 @@ namespace Type
  * Ritorna true se il valore è considerato numerico
  */
 
-bool Type::isNumeric(ValueType t) {
+inline bool Type::isNumeric(ValueType t) {
     return t == ValueType::Int || t == ValueType::Double;
 }
 
@@ -55,7 +55,7 @@ bool Type::isNumeric(ValueType t) {
  * Ritorna true se il valore è considerato testuale
  */
 
-bool Type::isTextual(ValueType t) {
+inline bool Type::isTextual(ValueType t) {
     return t == ValueType::Char || t == ValueType::String;
 }
 
@@ -67,7 +67,7 @@ bool Type::isTextual(ValueType t) {
  * es: int x = 5.0; (variableType è int mentre assignType è double).
  */
 
-bool Type::isAssignmentCompatible(ValueType destination, ValueType source) {
+inline bool Type::isAssignmentCompatible(ValueType destination, ValueType source) {
     if (destination == ValueType::Error) return true;  // errore già segnalato altrove, non duplicare
     if (source == ValueType::Error) return true;
 
@@ -84,7 +84,7 @@ bool Type::isAssignmentCompatible(ValueType destination, ValueType source) {
  * tra loro.
   */
 
-bool Type::isEqualityComparable(ValueType left, ValueType right)
+inline bool Type::isEqualityComparable(ValueType left, ValueType right)
 {
     if(left == right)
         return true;
@@ -95,7 +95,7 @@ bool Type::isEqualityComparable(ValueType left, ValueType right)
     return false;
 }
 
-bool Type::isRelationalComparable(ValueType left, ValueType right)
+inline bool Type::isRelationalComparable(ValueType left, ValueType right)
 {
     if(left == right)
         return true;
@@ -106,7 +106,7 @@ bool Type::isRelationalComparable(ValueType left, ValueType right)
     return false;
 }
 
-ValueType Type::arithmeticResultType(ValueType left, ValueType right)
+inline ValueType Type::arithmeticResultType(ValueType left, ValueType right)
 {
     if (!isNumeric(left) || !isNumeric(right))
         return ValueType::Error;
@@ -116,7 +116,7 @@ ValueType Type::arithmeticResultType(ValueType left, ValueType right)
                : ValueType::Int;
 }
 
-ValueType Type::additionResultType(ValueType left, ValueType right)
+inline ValueType Type::additionResultType(ValueType left, ValueType right)
 {
     // caso numerico
     if (isNumeric(left) && isNumeric(right))
@@ -144,28 +144,28 @@ ValueType Type::additionResultType(ValueType left, ValueType right)
     return ValueType::Error;
 }
 
-ValueType Type::equalityResultType(ValueType left, ValueType right)
+inline ValueType Type::equalityResultType(ValueType left, ValueType right)
 {
     return isEqualityComparable(left, right)
         ? ValueType::Bool
         : ValueType::Error;
 }
 
-ValueType Type::relationalResultType(ValueType left, ValueType right)
+inline ValueType Type::relationalResultType(ValueType left, ValueType right)
 {
     return isRelationalComparable(left, right)
         ? ValueType::Bool
         : ValueType::Error;
 }
 
-ValueType Type::logicalResultType(ValueType left, ValueType right)
+inline ValueType Type::logicalResultType(ValueType left, ValueType right)
 {
     return (left == ValueType::Bool && right == ValueType::Bool)
            ? ValueType::Bool
            : ValueType::Error;
 }
 
-ValueType Type::binaryResultType(TokenType _operator, ValueType left, ValueType right)
+inline ValueType Type::binaryResultType(TokenType _operator, ValueType left, ValueType right)
 {
     if (left == ValueType::Error || right == ValueType::Error)
         return ValueType::Error;
@@ -213,7 +213,7 @@ ValueType Type::binaryResultType(TokenType _operator, ValueType left, ValueType 
     return ValueType::Error;
 }
 
-ValueType Type::unaryResultType(TokenType _operator, ValueType left)
+inline ValueType Type::unaryResultType(TokenType _operator, ValueType left)
 {
     if(left == ValueType::Error)
         return ValueType::Error;
@@ -239,7 +239,7 @@ ValueType Type::unaryResultType(TokenType _operator, ValueType left)
     }
 }
 
-ValueType Type::promotionType(ValueType first, ValueType second)
+inline ValueType Type::promotionType(ValueType first, ValueType second)
 {
     if (first == ValueType::Error || second == ValueType::Error)
         return ValueType::Error;
@@ -254,7 +254,7 @@ ValueType Type::promotionType(ValueType first, ValueType second)
     return ValueType::Error;
 }
 
-std::string Type::toString(const ValueType& type) {
+inline std::string Type::toString(const ValueType& type) {
     switch(type) {
     case ValueType::Int: return "Int";
         break;
@@ -274,7 +274,7 @@ std::string Type::toString(const ValueType& type) {
     return "Unknown";
 }
 
-ValueType Type::toValueType(const std::string& typeName) {
+inline ValueType Type::toValueType(const std::string& typeName) {
     if (typeName == "int") return ValueType::Int;
     if (typeName == "double") return ValueType::Double;
     if (typeName == "string") return ValueType::String;
