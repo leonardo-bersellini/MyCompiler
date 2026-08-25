@@ -469,8 +469,9 @@ void CodeGenerator::generateDeclarationStmt(const DeclarationStmt *st)
 
     if(st->initializer) {
         // store del valore in inizializzazione
-        auto *val = generateExpr(st->initializer.get()).llvm_value;
-        Builder.CreateStore(val, alloc);
+        auto val = generateExpr(st->initializer.get());
+        auto casted = castValue(val.llvm_value, val.type, st->type);
+        Builder.CreateStore(casted, alloc);
     }
 }
 
@@ -510,8 +511,9 @@ void CodeGenerator::generateFunctionStmt(const FunctionStmt *st)
 
     generateStmt(st->body.get());
 
-    if (!Builder.GetInsertBlock()->getTerminator()) {
-        if (st->returnType == ValueType::Void)
+    //le funzioni void possono terminare senza return esplicito
+    if(!Builder.GetInsertBlock()->getTerminator()) {
+        if(st->returnType == ValueType::Void)
             Builder.CreateRetVoid();
     }
 
@@ -542,6 +544,7 @@ void CodeGenerator::generateIfStmt(const IfStmt *st)
     llvm::BasicBlock* elseBB = nullptr;
 
     if(st->thenBranch) {
+        // questo caso è garantito dal parser come sempre valido (!= nullptr)
         thenBB = llvm::BasicBlock::Create(Context, "then", function);
     }
 
@@ -602,9 +605,13 @@ void CodeGenerator::generateForStmt(const ForStmt *st)
     Builder.SetInsertPoint(condBB);
 
     //crea il ciclo come branch logica
-    //if(!st->condition) st->condition = 
-    llvm::Value *condition = generateExpr(st->condition.get()).llvm_value;
-    Builder.CreateCondBr(condition, bodyBB, afterBB);
+    if(st->condition) {
+        llvm::Value *condition = generateExpr(st->condition.get()).llvm_value;
+        Builder.CreateCondBr(condition, bodyBB, afterBB);
+    } else {
+        //loop infinito (senza condizione)
+        Builder.CreateBr(bodyBB);
+    }
 
     //body
     Builder.SetInsertPoint(bodyBB);

@@ -374,10 +374,8 @@ std::unique_ptr<Stmt> Parser::parseIfStmt()
     auto condition = parseExpr();   // Lettura della condizione tra parentesi
     expect(TokenType::RParen);
 
-
-    // --- if body --- //
+    // if body
     std::unique_ptr<Stmt> body;
-
     body = parseBranchBody();
 
     // --- elif --- //
