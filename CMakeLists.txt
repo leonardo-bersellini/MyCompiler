@@ -1,16 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(MyCompiler 
-    VERSION 1.2.2 
+    VERSION 1.4.3 
     LANGUAGES CXX
     DESCRIPTION "Bismuth: compilatore sviluppato in C++ e LLVM"
 )
 
 # NOME DEL PROGETTO : MYCOMPILER
-
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -26,10 +22,7 @@ configure_file(
     ${CMAKE_BINARY_DIR}/generated/version.h
 )
 
-# FIND PACKAGE
-
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
+# FIND PACKAGES
 
 if(NOT LLVM_DIR)
     set(LLVM_DIR "C:/llvm-install/lib/cmake/llvm" CACHE PATH "C:/llvm-install/lib/cmake/llvm/LLVMConfig.cmake")
@@ -57,7 +50,7 @@ add_executable(Bismuth
   compiler/utils/ansi.h compiler/utils/ansi.cpp
 
 )
-target_link_libraries(Bismuth PRIVATE Qt${QT_VERSION_MAJOR}::Core ${LLVM_LIBS})
+target_link_libraries(Bismuth PRIVATE ${LLVM_LIBS})
 
 # COMPILE DEFINITIONS AND MACROS
 

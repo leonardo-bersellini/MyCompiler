@@ -9,15 +9,15 @@
 
 #include "AbstractSintaxTree.h"
 
-inline const std::array<std::type_index, 2> valid_global_stmts = 
+inline const std::array<std::type_index, 1> valid_global_stmts = 
 {
-    typeid( DeclarationStmt ),
+    // typeid( DeclarationStmt ), -> bisogna modificare il codegen per supportare alloca globali
     typeid( FunctionStmt    ),
 };
 
-inline const std::array<std::string, 4> valid_winmain_identifiers = 
+inline const std::array<std::string, 5> valid_winmain_identifiers = 
 {
-    "WinMain", "winmain",
+    "WinMain", "winmain", "winMain",
     "Main", "main"
 };
 

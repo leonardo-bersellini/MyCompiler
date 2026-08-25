@@ -43,7 +43,17 @@ private:
     llvm::LLVMContext Context;                              // Contesto llvm incluso dalle funzioni
     llvm::IRBuilder<> Builder;                              // Genera l'IR llvm
     std::unique_ptr<llvm::Module> Module;                   // Contenitore del codice generato
-    std::unordered_map<std::string, llvm::AllocaInst*> symbolTable;
+
+    // stack di scopes per mantenere lo shadowing dei valori allocati
+    std::vector<std::unordered_map<std::string, llvm::AllocaInst*>> allocaScopeStack;
+
+    void declareSymbol(const std::string& name, llvm::AllocaInst* alloca);
+    llvm::AllocaInst* lookupSymbol(const std::string& name);
+
+    void pushScope();
+    void popScope();
+
+    bool isGlobalScope() const;
 
     llvm::Type* getLLVMType(const ValueType &type);
     ValueType getValueType(llvm::Type *type);

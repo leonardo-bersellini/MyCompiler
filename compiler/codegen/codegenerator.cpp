@@ -192,6 +192,65 @@ bool CodeGenerator::link(const std::string &objFile, const std::string &outputEx
     return true;
 }
 
+/// -- STACK FUNCTIONS --- ///
+
+/*
+ * Dichiara un simbolo nello scope corrente (l'ultimo elemento dello stack),
+ * associandolo alla sua alloca llvm. Non verifica scope esterni per permettere shadowing.
+ */
+
+void CodeGenerator::declareSymbol(const std::string& name, llvm::AllocaInst* alloca)
+{
+    allocaScopeStack.back()[name] = alloca;
+}
+
+/*
+ * Cerca un simbolo per nome, scorrendo lo stack in ordine inverso: dallo scope più
+ * interno (corrente) verso quello più esterno, per rispettare lo shadowing.
+ * Se non trovato in nessun livello, il programma lancia un eccezione. Si tratta di un
+ * bug interno del compiler, l'analisi semantica avrebbe dovuto bloccarlo.
+ */
+
+llvm::AllocaInst* CodeGenerator::lookupSymbol(const std::string& name) 
+{
+    for (auto it = allocaScopeStack.rbegin(); it != allocaScopeStack.rend(); ++it)
+    {
+        auto found = it->find(name);
+        if (found != it->end()) {
+            return found->second;
+        }
+    }
+
+    throw std::runtime_error("codegen internal error: undeclared symbol '" + name + "'");
+    return nullptr;
+}
+
+/* 
+ * Aggiunge un nuovo scope (una mappa vuota) in cima allo stack. 
+ */
+
+void CodeGenerator::pushScope() {
+    allocaScopeStack.push_back(std::unordered_map<std::string, llvm::AllocaInst*>());
+}
+
+/*
+ * Esce dallo scope corrente rimuovendo un livelo dallo stack 
+ */
+
+void CodeGenerator::popScope() {
+    allocaScopeStack.pop_back();
+}
+
+/*
+ * Questa funzione permette di controllare se lo scope corrente è quello globale.
+ * Risulta utile per controlli come la distinzione tra declaration e global-declaration
+ */
+
+bool CodeGenerator::isGlobalScope() const
+{
+    return allocaScopeStack.size() == 1;
+}
+
 /// --- UTILITIES --- ///
 
 /*
@@ -288,12 +347,14 @@ llvm::Value* CodeGenerator::castValue(llvm::Value *value, ValueType from, ValueT
 
 void CodeGenerator::generate(const Program &program)
 {
-    //TODO refactory di ogni cosa spostando il codice in funzioni solo per chiarezza
+    pushScope(); //scope globale
 
     for(const auto& st : program.statements)
     {
         generateStmt(st.get());
     }
+
+    popScope();
 }
 
 /*
@@ -307,19 +368,19 @@ void CodeGenerator::generateStmt(const Stmt *stmt)
     // Dichiarazione
     if(auto s = dynamic_cast<const DeclarationStmt*>(stmt))
     {
-        generateDeclarationStmt(s);
+        generateDeclarationStmt(s); 
     }
 
     // Assegnazione
     else if(auto s = dynamic_cast<const AssignmentStmt*>(stmt))
     {
-        generateAssignStmt(s);
+        generateAssignStmt(s); 
     }
 
     // Espressione
     else if(auto s = dynamic_cast<const ExpressionStmt*>(stmt))
     {
-        generateExpr(s->expr.get());
+        generateExpr(s->expr.get()); 
     }
 
     // Scopes
@@ -370,6 +431,8 @@ void CodeGenerator::generateStmt(const Stmt *stmt)
 
 void CodeGenerator::generateScopeStmt(const BlockStmt *st)
 {
+    pushScope();
+
     for(const auto& st : st->statements) {
         generateStmt(st.get());
 
@@ -377,11 +440,13 @@ void CodeGenerator::generateScopeStmt(const BlockStmt *st)
             break;
         }
     }
+
+    popScope();
 }
 
 void CodeGenerator::generateAssignStmt(const AssignmentStmt *st)
 {
-    auto symbol = symbolTable[st->name];
+    auto symbol = lookupSymbol(st->name);
 
     auto value = generateExpr(st->value.get());
 
@@ -393,9 +458,14 @@ void CodeGenerator::generateAssignStmt(const AssignmentStmt *st)
 
 void CodeGenerator::generateDeclarationStmt(const DeclarationStmt *st)
 {
-    // alloca variabile
+    if(isGlobalScope()) 
+    {
+        throw std::runtime_error("codegen internal error: global variable declarations not yet supported");
+    }
+
+    // alloca variabile locale
     auto* alloc = Builder.CreateAlloca(getLLVMType(st->type), nullptr, st->name);
-    symbolTable.insert({st->name, alloc});
+    declareSymbol(st->name, alloc);
 
     if(st->initializer) {
         // store del valore in inizializzazione
@@ -420,12 +490,32 @@ void CodeGenerator::generateFunctionStmt(const FunctionStmt *st)
 
     Builder.SetInsertPoint(entry);
 
+    //creazione dello scope della funzione, con dichiarazione dei parametri come variabili
+    pushScope();
+
+    int i = 0;
+    for(auto& arg : function->args())
+    {
+        const FunctionParam& p = st->params[i];
+
+        arg.setName(p.name);
+
+        auto* alloc = Builder.CreateAlloca(getLLVMType(p.type), nullptr, p.name);
+        Builder.CreateStore(&arg, alloc);
+
+        declareSymbol(p.name, alloc);
+
+        i++;
+    }
+
     generateStmt(st->body.get());
 
     if (!Builder.GetInsertBlock()->getTerminator()) {
         if (st->returnType == ValueType::Void)
             Builder.CreateRetVoid();
     }
+
+    popScope();
 }
 
 void CodeGenerator::generateReturnStmt(const ReturnStmt *st)
@@ -497,6 +587,7 @@ void CodeGenerator::generateForStmt(const ForStmt *st)
 {
     llvm::Function* function = Builder.GetInsertBlock()->getParent();
 
+    pushScope();
     //init
     if (st->init) generateStmt(st->init.get());
 
@@ -533,6 +624,8 @@ void CodeGenerator::generateForStmt(const ForStmt *st)
     }
 
     Builder.SetInsertPoint(afterBB);
+
+    popScope();
 }
 
 void CodeGenerator::generateWhileStmt(const WhileStmt *st)
@@ -619,7 +712,8 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
     // Variable Expression
     else if(auto s = dynamic_cast<const VariableExpr*>(expr))
     {
-        llvm::AllocaInst *val = symbolTable[s->name];
+        
+        llvm::AllocaInst *val = lookupSymbol(s->name);
 
         return ExprGenResult {
             Builder.CreateLoad(val->getAllocatedType(), val, s->name),
