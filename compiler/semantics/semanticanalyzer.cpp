@@ -2,6 +2,8 @@
 
 #include <unordered_map>
 
+#include "toplevel-rules.h"
+
 SemanticAnalyzer::SemanticAnalyzer()
 {
 }
@@ -22,32 +24,35 @@ void SemanticAnalyzer::analyzeProgram(const Program &program, ErrorLog &errorLog
 
     this->scopeStack.push_back(std::unordered_map<std::string, SymbolInfo>()); //scope globale
 
+    //flaga di controllo
+    bool winmain_found = false;
+    bool valid = true;
+
+    //controllo degli stmt top-level
+    for(const std::unique_ptr<Stmt>& st : program.statements) 
+    {
+        if(isWinMain(st.get())) {
+            winmain_found = true;
+        }
+
+        if(!isValidAtTopLevel(*st.get())) {
+            this->errorLog->addError("invalid statement at top-level context. [invalidGlobalStmt]");
+            valid = false;
+        }
+    }
+
+    if(!winmain_found) {
+        this->errorLog->addError("could not find winmain entrance for program");
+        return;
+    }
+
+    if(!valid) return;
+
+    //analisi del programma
     for(const auto& st : program.statements) {
         analyzeStmt(st.get());
     }
 
-    //placeholder
-    for(const std::unique_ptr<Stmt>& st : program.statements) {
-        if(!dynamic_cast<const FunctionStmt*>(st.get())) {
-            this->errorLog->addError("presenza di stmt fuori da una funzione [alert placeholder]");
-        }
-    }
-/*
- *  TODO !
-    for(const std::unique_ptr<Stmt>& st : program.statements) {
-        if(!dynamic_cast<const DeclarationStmt*>(st.get()) &&
-            !dynamic_cast<const FunctionStmt*>(st.get()))
-        {
-            this->errorLog->addError("statement invalido come esterno ad una funzione");
-        }
-    }
-
-    ELSE -> in ogni caso di analyzestmt, es assignment stmt:
-        if(currentFunction == nullptr) {
-            errorLog->addError("assegnazione invalida esterna ad una funzione");
-        }
-    più debole come strategia ma con messaggi di errore utili e più controllo sulla casistica.
-*/
 }
 
 /*
