@@ -49,6 +49,7 @@ struct UtilityFlag {
 inline const std::vector<UtilityFlag> utilityFlags = {
     { "llvm-ir", "Print generated LLVM IR to stdout", &CompilerOptions::emitIR },
     { "verbose", "Show detailed information during the execution.", &CompilerOptions::verbose},
+    { "no-generation", "Execute the compiler process without generating any file as output", &CompilerOptions::noOutputFile},
 };
 
 

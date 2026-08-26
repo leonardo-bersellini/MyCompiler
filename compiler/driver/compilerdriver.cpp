@@ -338,6 +338,11 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
 
     // Opzioni di output kind
 
+    if(options.noOutputFile) {
+        reportCliMsg("\nskipping output file generation...");
+        return true;
+    }
+
     std::ofstream out(options.outputFile, std::ios::out | std::ios::binary);
     if(!out.is_open()) {
         reportCliError("unable to create and open output file: " + options.outputFile);

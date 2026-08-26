@@ -26,6 +26,7 @@ struct CompilerOptions
     //flag opzionali aggiuntive
     bool emitIR = false;
     bool verbose = false;
+    bool noOutputFile = false;
 };
 
 #endif // OPTIONS_H
