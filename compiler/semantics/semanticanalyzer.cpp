@@ -59,6 +59,7 @@ void SemanticAnalyzer::analyzeProgram(const Program &program, ErrorLog &errorLog
  * Analizza lo statement fornito come parametro.
  * Tramite dynamic_cast, risale al tipo di statement fornito e lo instrada di conseguenza all'analisi
  * seguente, dopo aver gestito lo stato della tabella dei simboli se necessario.
+ * Ogni caso richiama una funzione helper che contiene la logica di analisi di quel preciso stmt.
  */
 
 void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
@@ -66,34 +67,13 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
     // Nuovo Scope
     if(auto s = dynamic_cast<const BlockStmt*>(stmt))
     {
-        pushScope(); //crea un nuovo scope
-
-        for(const auto& st : s->statements) {
-            analyzeStmt(st.get());
-        }
-
-        popScope(); //chiude lo scope corrente
+        analyzeBlockStmt(s);
     }
 
     // Assegnazione
     else if(auto s = dynamic_cast<const AssignmentStmt*>(stmt))
     {
-        // risultato dell'espressione di assegnazione, valore che si sta assegnando
-        ExprAnalysisResult valueResult = analyzeExpr(s->value.get());
-
-        if (symbolExistsAnywhere(s->name))
-        {
-            /* Controllo di tipo nell'operatore di assegnazione */
-            ValueType varType = lookupSymbolInfo(s->name).type;
-
-            if (!Type::isAssignmentCompatible(varType, valueResult.value_type)) {
-                errorLog->addError("tipo incompatibile nell'assegnazione a " + s->name + "  " +
-                                   "[confronto tra " + Type::toString(varType) + " e " + Type::toString(valueResult.value_type) + "]");
-            }
-        }
-        else {
-            errorLog->addError("variabile non dichiarata: " + s->name);
-        }
+        analyzeAssignment(s);
     }
 
     // Espressione
@@ -105,143 +85,37 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
     // Dichiarazione
     else if(auto s = dynamic_cast<const DeclarationStmt*>(stmt))
     {
-        if(s->type == ValueType::Void) { 
-            errorLog->addError("variable " + s->name + " declared void");
-            return;
-        }
-
-        if(s->initializer)
-        {
-            //risultato dell'espressione in assegnazione, valore che si sta assegnando
-            ExprAnalysisResult initResult = analyzeExpr(s->initializer.get());
-
-            if (!Type::isAssignmentCompatible(s->type, initResult.value_type)) {
-                errorLog->addError("tipo incompatibile nell'inizializzazione di " + s->name + "  " +
-                                   "[confronto tra " + Type::toString(s->type) + " e " + Type::toString(initResult.value_type) + "]");
-            }
-        }
-
-        if (symbolExistsInCurrentScope(s->name)) {
-            errorLog->addError("redeclaration of variable: " + s->name);
-        } else {
-            declareSymbol(s->name, SymbolInfo{s->type});
-        }
+        analyzeDeclaration(s);
     }
 
     // Function Declaration
     else if(auto s = dynamic_cast<const FunctionStmt*>(stmt))
     {
-        if(functionTable.contains(s->name)) {
-            // funzione già dichiarata
-            errorLog->addError("redeclaration of function:" + s->name);
-            return;
-        }
-
-        // --- raccolta dei tipi dei parametri --- //
-        std::vector<ValueType> paramsType;
-
-        for(const FunctionParam& p : s->params) {
-            paramsType.push_back(p.type);
-        }
-
-        // --- insert nella tabella --- //
-        functionTable.insert({s->name, FunctionInfo{s->returnType, paramsType}});
-
-        // --- analisi del codice della funzione --- //
-        pushScope();
-
-        // dichiarazione dei parametri come variabili nello scope
-        for(const FunctionParam& p : s->params) {
-            declareSymbol(p.name, SymbolInfo{p.type});
-        }
-
-        currentFunction = &functionTable[s->name];
-
-        analyzeStmt(s->body.get());
-
-        popScope();
-
-        currentFunction = nullptr;
+        analyseFunction(s);
     }
 
     // Return Stmt
     else if(auto s = dynamic_cast<const ReturnStmt*>(stmt))
     {
-        if(currentFunction == nullptr) {
-            errorLog->addError("return stmt fuori da una funzione");
-            return;
-        }
-
-        if(currentFunction->returnType == ValueType::Void && s->value != nullptr) {
-            errorLog->addError("returning a value in a function declared void");
-            return;
-        }
-
-        if(currentFunction->returnType != ValueType::Void && s->value == nullptr) {
-            errorLog->addError("return stmt with no value in a function returning non-void");
-            return;
-        }
-
-        if(s->value != nullptr) {
-            // controllo del tipo dell'espressione (return expr;)
-            ExprAnalysisResult res = analyzeExpr(s->value.get());
-
-            if(!Type::isAssignmentCompatible(currentFunction->returnType, res.value_type)) {
-                errorLog->addError("could not convert " + Type::toString(currentFunction->returnType) +
-                                   " to " + Type::toString(res.value_type) + " in return");
-                return;
-            }
-        }
+        analyzeReturn(s);
     }
 
     // If Condition
     else if(auto s = dynamic_cast<const IfStmt*>(stmt))
     {
-        ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
-
-        if(condResult.value_type != ValueType::Bool && condResult.value_type != ValueType::Error) {
-            errorLog->addError("if condition must be of type boolean");
-        }
-
-        analyzeStmt(s->thenBranch.get()); //il body è uno stmt
-
-        if(s->elseBranch) {
-            analyzeStmt(s->elseBranch.get()); // se != nullptr
-        }
+        analyzeIf(s);
     }
 
     // For Loop
     else if(auto s = dynamic_cast<const ForStmt*>(stmt))
     {
-        pushScope(); // scope che racchiude init, condition, update, body
-
-        if(s->init) analyzeStmt(s->init.get());
-        if(s->condition) {
-            ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
-            if(condResult.value_type != ValueType::Bool && condResult.value_type != ValueType::Error) {
-                errorLog->addError("la condizione del for deve essere di tipo bool");
-            }
-        }
-        if(s->update) analyzeExpr(s->update.get());
-
-        loopDepth++;
-        analyzeStmt(s->body.get());
-        loopDepth--;
-
-        popScope();
+        analyzeFor(s);
     }
 
     // While Loop
     else if(auto s = dynamic_cast<const WhileStmt*>(stmt))
     {
-        ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
-        if(condResult.value_type != ValueType::Bool && condResult.value_type != ValueType::Error) {
-            errorLog->addError("la condizione del while deve essere di tipo bool");
-        }
-
-        loopDepth++;
-        analyzeStmt(s->body.get());
-        loopDepth--;
+        analyzeWhile(s);
     }
 
     // Break Stmt
@@ -266,6 +140,178 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
         //blocco vuoto, nessuna azione richiesta poichè l'errore è gia stato segnalato
     }
 }
+
+void SemanticAnalyzer::analyzeBlockStmt(const BlockStmt* block) 
+{
+    pushScope(); //crea un nuovo scope
+
+    for(const auto& st : block->statements) {
+        analyzeStmt(st.get());
+    }
+
+    popScope(); //chiude lo scope corrente
+}
+
+void SemanticAnalyzer::analyzeAssignment(const AssignmentStmt* s) 
+{
+    // risultato dell'espressione di assegnazione, valore che si sta assegnando
+    ExprAnalysisResult valueResult = analyzeExpr(s->value.get());
+
+    if (symbolExistsAnywhere(s->name))
+    {
+        /* Controllo di tipo nell'operatore di assegnazione */
+        ValueType varType = lookupSymbolInfo(s->name).type;
+
+        if (!Type::isAssignmentCompatible(varType, valueResult.value_type)) {
+            errorLog->addError("tipo incompatibile nell'assegnazione a " + s->name + "  " +
+                               "[confronto tra " + Type::toString(varType) + " e " + Type::toString(valueResult.value_type) + "]");
+        }
+    } else {
+        errorLog->addError("variabile non dichiarata: " + s->name);
+    }
+}
+
+void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
+{
+    if(s->type == ValueType::Void) { 
+        errorLog->addError("variable " + s->name + " declared void");
+        return;
+    }
+
+    if(s->initializer)
+    {
+        //risultato dell'espressione in assegnazione, valore che si sta assegnando
+        ExprAnalysisResult initResult = analyzeExpr(s->initializer.get());
+
+        if (!Type::isAssignmentCompatible(s->type, initResult.value_type)) {
+            errorLog->addError("tipo incompatibile nell'inizializzazione di " + s->name + "  " +
+                                "[confronto tra " + Type::toString(s->type) + " e " + Type::toString(initResult.value_type) + "]");
+        }
+    }
+
+    if (symbolExistsInCurrentScope(s->name)) {
+        errorLog->addError("redeclaration of variable: " + s->name);
+    } else {
+        declareSymbol(s->name, SymbolInfo{s->type});
+    }
+}
+
+void SemanticAnalyzer::analyseFunction(const FunctionStmt* s)
+{
+    if(functionTable.contains(s->name)) {
+        // funzione già dichiarata
+        errorLog->addError("redeclaration of function:" + s->name);
+        return;
+    }
+
+    // --- raccolta dei tipi dei parametri --- //
+    std::vector<ValueType> paramsType;
+
+    for(const FunctionParam& p : s->params) {
+        paramsType.push_back(p.type);
+    }
+
+    // --- insert nella tabella --- //
+    functionTable.insert({s->name, FunctionInfo{s->returnType, paramsType}});
+
+    // --- analisi del codice della funzione --- //
+    pushScope();
+
+    // dichiarazione dei parametri come variabili nello scope
+    for(const FunctionParam& p : s->params) {
+        declareSymbol(p.name, SymbolInfo{p.type});
+    }
+
+    currentFunction = &functionTable[s->name];
+
+    // ogni funzione non-void deve avere un return valido per ogni path
+    if(s->returnType != ValueType::Void && !allPathsReturn(s->body.get())) {
+        errorLog->addError("not all code paths return a value in function " + s->name);
+    }
+
+    analyzeStmt(s->body.get());
+
+    popScope();
+
+    currentFunction = nullptr;
+}
+
+void SemanticAnalyzer::analyzeReturn(const ReturnStmt* s)
+{
+    if(currentFunction == nullptr) {
+        errorLog->addError("return stmt fuori da una funzione");
+        return;
+    }
+
+    if(currentFunction->returnType == ValueType::Void && s->value != nullptr) {
+        errorLog->addError("returning a value in a function declared void");
+        return;
+    }
+
+    if(currentFunction->returnType != ValueType::Void && s->value == nullptr) {
+        errorLog->addError("return stmt with no value in a function returning non-void");
+        return;
+    }
+
+    if(s->value != nullptr) {
+        // controllo del tipo dell'espressione (return expr;)
+        ExprAnalysisResult res = analyzeExpr(s->value.get());
+
+        if(!Type::isAssignmentCompatible(currentFunction->returnType, res.value_type)) {
+            errorLog->addError("could not convert " + Type::toString(currentFunction->returnType) +
+                               " to " + Type::toString(res.value_type) + " in return");
+            return;
+        }
+    }
+}
+
+void SemanticAnalyzer::analyzeIf(const IfStmt* s)
+{
+    ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
+
+    if(condResult.value_type != ValueType::Bool && condResult.value_type != ValueType::Error) {
+        errorLog->addError("if condition must be of type boolean");
+    }
+
+    analyzeStmt(s->thenBranch.get()); //il body è uno stmt
+
+    if(s->elseBranch) {
+        analyzeStmt(s->elseBranch.get()); // se != nullptr
+    }
+}
+
+void SemanticAnalyzer::analyzeFor(const ForStmt* s)
+{
+    pushScope(); // scope che racchiude init, condition, update, body
+
+    if(s->init) analyzeStmt(s->init.get());
+    if(s->condition) {
+        ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
+        if(condResult.value_type != ValueType::Bool && condResult.value_type != ValueType::Error) {
+            errorLog->addError("la condizione del for deve essere di tipo bool");
+        }
+    }
+    if(s->update) analyzeExpr(s->update.get());
+
+    loopDepth++;
+    analyzeStmt(s->body.get());
+    loopDepth--;
+
+    popScope();
+}
+
+void SemanticAnalyzer::analyzeWhile(const WhileStmt* s)
+{
+    ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
+    if(condResult.value_type != ValueType::Bool && condResult.value_type != ValueType::Error) {
+        errorLog->addError("la condizione del while deve essere di tipo bool");
+    }
+
+    loopDepth++;
+    analyzeStmt(s->body.get());
+    loopDepth--;
+}
+
 
 /*
  * Analizza l'espressione fornita come parametro.
@@ -472,6 +518,31 @@ void SemanticAnalyzer::pushScope() {
 
 void SemanticAnalyzer::popScope() {
     scopeStack.pop_back();
+}
+
+/*
+ * Questa funzione controlla ricorsivamente che ogni percorso possibile di uno stmt
+ * finisca in qualche modo con un ritorno valido.
+ */
+
+bool SemanticAnalyzer::allPathsReturn(const Stmt* stmt) const
+{
+    if(auto d = dynamic_cast<const ReturnStmt*>(stmt)) {
+        return true;
+    }
+    else if(auto d = dynamic_cast<const BlockStmt*>(stmt)) {
+        for(const auto& st : d->statements) {
+            if(allPathsReturn(st.get())) return true;
+        }
+    }
+    else if(auto d = dynamic_cast<const IfStmt*>(stmt)) {
+        bool thenB = allPathsReturn(d->thenBranch.get());
+        bool elseB = allPathsReturn(d->elseBranch.get());
+
+        if(thenB && elseB) return true;
+    }
+
+    return false;
 }
 
 
