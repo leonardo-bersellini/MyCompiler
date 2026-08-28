@@ -41,6 +41,10 @@ private:
     void analyzeIf(const IfStmt* s);
     void analyzeFor(const ForStmt* s);
     void analyzeWhile(const WhileStmt* s);
+    void analyzeSwitch(const SwitchStmt* s);
+
+    void analyzeCase(const CaseStmt* s, const ValueType& switch_type);
+    void analyzeDefault(const DefaultStmt* s);
 
     ExprAnalysisResult analyzeExpr(const Expr* expr);
 

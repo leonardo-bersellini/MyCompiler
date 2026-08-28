@@ -70,6 +70,10 @@ private:
     void generateIfStmt(const IfStmt* st);
     void generateForStmt(const ForStmt* st);
     void generateWhileStmt(const WhileStmt* st);
+    void generateSwitchStmt(const SwitchStmt* st);
+
+    std::vector<llvm::ConstantInt*> collectCaseLabels(const CaseStmt* c, const CaseStmt*& leaf);
+    llvm::ConstantInt* generateConstantLabel(const Expr* label);
 
     ExprGenResult generateBinaryExpr(const BinaryExpr* s);
     ExprGenResult generateUnaryExpr(const UnaryExpr* expr);

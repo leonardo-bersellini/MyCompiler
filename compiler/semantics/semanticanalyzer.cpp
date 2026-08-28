@@ -118,6 +118,26 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
         analyzeWhile(s);
     }
 
+    // Switch
+    else if(auto s = dynamic_cast<const SwitchStmt*>(stmt))
+    {
+        analyzeSwitch(s);
+    }
+
+    // Case
+    else if(auto s = dynamic_cast<const CaseStmt*>(stmt))
+    {
+        // l'analisi di un case può trovarsi solo dentro uno switch stmt
+        errorLog->addError("invalid case outside of switch");
+    }
+
+    // Default
+    else if(auto s = dynamic_cast<const DefaultStmt*>(stmt))
+    {
+        // l'analisi di un default può trovarsi solo dentro uno switch stmt
+        errorLog->addError("invalid default outside of switch");
+    }
+
     // Break Stmt
     else if(dynamic_cast<const BreakStmt*>(stmt))
     {
@@ -310,6 +330,66 @@ void SemanticAnalyzer::analyzeWhile(const WhileStmt* s)
     loopDepth++;
     analyzeStmt(s->body.get());
     loopDepth--;
+}
+
+void SemanticAnalyzer::analyzeSwitch(const SwitchStmt* s)
+{
+    ExprAnalysisResult scrutineeResult = analyzeExpr(s->scrutinee.get());
+    
+    // controllo di validità del tipo dello scrutinee
+    switch (scrutineeResult.value_type)
+    {
+    case ValueType::Int:
+    case ValueType::Char:
+        break;
+    
+    default:
+        errorLog->addError("invalid type in switch condition (" 
+            + Type::toString(scrutineeResult.value_type) + ")");
+        break;
+    }
+
+    for(const auto& c : s->cases) {
+        analyzeCase(c.get(), scrutineeResult.value_type);
+    }
+
+    if(s->_default) {
+        analyzeDefault(s->_default.get());
+    }
+}
+
+void SemanticAnalyzer::analyzeCase(const CaseStmt* s, const ValueType& switch_type) 
+{
+    ExprAnalysisResult condResult = analyzeExpr(s->label.get());
+
+    if(condResult.value_type != switch_type) {
+        //non considera nessuna promozione automatica
+        errorLog->addError("case label value in incompatible with switch value");
+    }
+
+    //ogni label deve essere un valore costante a compile time
+    if(dynamic_cast<const CharExpr*>(s->label.get()) || dynamic_cast<const NumberExpr*>(s->label.get())) {
+        // il valore è di natura costante
+    } else {
+        errorLog->addError("case label value must be constant and known at compile-time");
+    }
+
+    for(const auto& st : s->body) {
+        //un case stmt va instradato direttamente
+        if(auto d = dynamic_cast<const CaseStmt*>(st.get())) {
+            analyzeCase(d, switch_type);
+        } else {
+            analyzeStmt(st.get());
+        }
+    }
+
+}
+
+void SemanticAnalyzer::analyzeDefault(const DefaultStmt* s)
+{
+    for(const auto& st : s->body) {
+        analyzeStmt(st.get());
+    }
 }
 
 

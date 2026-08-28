@@ -419,6 +419,12 @@ void CodeGenerator::generateStmt(const Stmt *stmt)
         generateReturnStmt(s);
     }
 
+    // Switch Stmt
+    else if(auto s = dynamic_cast<const SwitchStmt*>(stmt))
+    {
+        generateSwitchStmt(s);
+    }
+
     return;
 }
 
@@ -665,6 +671,98 @@ void CodeGenerator::generateWhileStmt(const WhileStmt *st)
 
     //spostamento fuori dal while
     Builder.SetInsertPoint(afterBB);
+}
+
+void CodeGenerator::generateSwitchStmt(const SwitchStmt* st)
+{
+    llvm::Value* scrutinee_val = generateExpr(st->scrutinee.get()).llvm_value;
+    llvm::Function* currentFunc = Builder.GetInsertBlock()->getParent();
+
+    llvm::BasicBlock* defaultBB = llvm::BasicBlock::Create(Context, "switch.default", currentFunc);
+    llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(Context, "switch.end", currentFunc);
+
+    //creazione dello switch
+    llvm::SwitchInst* switchInst = Builder.CreateSwitch(scrutinee_val, defaultBB);
+
+    //generazione dei case
+    for(const auto& c : st->cases)
+    {
+        const CaseStmt* leaf = nullptr; 
+        auto labels = collectCaseLabels(c.get(), leaf);
+
+        llvm::BasicBlock* caseBB = llvm::BasicBlock::Create(Context, "switch.case", currentFunc);
+
+        for(auto* labelVal : labels) {
+            switchInst->addCase(labelVal, caseBB);
+        }
+
+        //leaf contiene il body effettivo, che può essere condiviso da più labels
+        Builder.SetInsertPoint(caseBB);
+        //generazione del body
+        for(const auto& s : leaf->body) {
+            generateStmt(s.get());
+        }
+        if(!Builder.GetInsertBlock()->getTerminator()) {
+            Builder.CreateBr(mergeBB);
+        }
+    }
+
+    //creazione del default
+    Builder.SetInsertPoint(defaultBB);
+    if (st->_default) {
+        for (const auto& s : st->_default->body) {
+            generateStmt(s.get());
+        }
+    }
+    if (!Builder.GetInsertBlock()->getTerminator()) {
+        Builder.CreateBr(mergeBB);
+    }
+
+    Builder.SetInsertPoint(mergeBB);
+
+}
+
+/*
+ * Questa funzione di utility si occupa di raccogliere le label costanti di una serie di 
+ * case stmts, che condividono lo stesso body annidato.
+ * Ritorna anche il case finale (quello che contiene il body comune agli altri) per valore.
+ * Il ritorno principale è un vettore di costanti, necessarie per llvm.
+ */
+
+std::vector<llvm::ConstantInt*> CodeGenerator::collectCaseLabels(const CaseStmt* c, const CaseStmt*& leaf) 
+{
+    std::vector<llvm::ConstantInt*> labels;
+    labels.push_back(generateConstantLabel(c->label.get()));
+
+    // se il body contiene un solo CaseStmt annidato, scendi ricorsivamente
+    if (c->body.size() == 1) {
+        if (auto nested = dynamic_cast<const CaseStmt*>(c->body[0].get())) {
+            auto nestedLabels = collectCaseLabels(nested, leaf);
+            labels.insert(labels.end(), nestedLabels.begin(), nestedLabels.end());
+            return labels;
+        }
+    }
+
+    leaf = c; // questo è il case con il body vero
+    return labels;
+}
+
+/*
+ * Questa utility permette di ottenere un oggetto llvm ConstantInt a partire da una label
+ * di un case. Per tanto è costruita sulla struttura di un case label.
+ */
+
+llvm::ConstantInt* CodeGenerator::generateConstantLabel(const Expr* label)
+{
+    if (auto n = dynamic_cast<const NumberExpr*>(label)) {
+        return llvm::ConstantInt::get(Context, llvm::APInt(32, static_cast<uint64_t>(n->value), true));
+    }
+    if (auto c = dynamic_cast<const CharExpr*>(label)) {
+        return llvm::ConstantInt::get(Context, llvm::APInt(8, static_cast<uint64_t>(c->value), false));
+    }
+
+    // non dovrebbe mai accadere, garantito dall'analisi semantica
+    throw std::runtime_error("internal error: non-constant case label reached codegen");
 }
 
 

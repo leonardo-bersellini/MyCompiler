@@ -131,7 +131,10 @@ std::unique_ptr<Stmt> Parser::parseStatement()
         // For Statement
 
         return parseForStmt();
-
+    }
+    else if(check(TokenType::SwitchKeyword))
+    {
+        return parseSwitchStmt();
     }
     else if(check(TokenType::BreakKeyword))
     {
@@ -473,6 +476,128 @@ std::unique_ptr<Stmt> Parser::parseWhileStmt()
     wStmt->body = std::move(body);
 
     return wStmt;
+}
+
+/*
+ * Questa funzione si occupa del parsing degli switch stmt
+ */
+
+std::unique_ptr<Stmt> Parser::parseSwitchStmt()
+{
+    advance(); //consuma switch
+
+    expect(TokenType::LParen);
+    auto cond = parseExpr();
+    expect(TokenType::RParen);
+
+    //creazione dello switch
+    auto _switch = std::make_unique<SwitchStmt>();
+    _switch.get()->scrutinee = std::move(cond);
+
+    bool foundDefault = false;
+
+    expect(TokenType::LBrace);
+    while(!isAtEnd() && peek().type != TokenType::RBrace) 
+    {
+        if(check(TokenType::CaseKeyword)) 
+        {
+            auto _case = std::move(parseCaseStmt()); 
+            _switch.get()->cases.push_back(std::move(_case));
+        }
+        else if(check(TokenType::DefaultKeyword)) 
+        {
+            if(!foundDefault) {
+                _switch.get()->_default = std::move(parseDefaultStmt());
+                foundDefault = true;
+            } else {
+                errorLog->addError("invalid second default in switch", tokens.at(currentPos).position);
+            }
+        }
+        else {
+            errorLog->addError("invalid word in stmt body: " + typeToString(peek().type));
+            return std::make_unique<ErrorStmt>();
+        }
+    }
+
+    if(isAtEnd()) {
+        errorLog->addError("Expected '}' before end of file", tokens.at(currentPos).position);
+    } else {
+        bool closed = expect(TokenType::RBrace);
+
+        if(!closed) {
+            auto s = std::make_unique<ErrorStmt>();
+            return s;
+        }
+    }
+
+    return _switch;
+}
+
+/*
+ * Questa funzione si occupa del parsing dei case stmt.
+ * Viene richiamata solo all'interno del parsing di un istruzione switch,
+ * genera una serie di case annidati (case che puntano ad altri case) nel caso di case
+ * senza body (dove si generano più case con lo stesso body).
+ */
+
+std::unique_ptr<CaseStmt> Parser::parseCaseStmt() 
+{
+    advance(); //consuma case
+
+    auto _case = std::make_unique<CaseStmt>();
+    _case.get()->label = std::move(parseExpr());
+            
+    expect(TokenType::Colon);
+
+    while(!isAtEnd() && peek().type != TokenType::CaseKeyword && peek().type != TokenType::RBrace 
+    && peek().type != TokenType::DefaultKeyword)
+    {
+        auto st = parseStatement();
+
+        _case.get()->body.push_back(std::move(st));
+    }
+
+    if(isAtEnd()) {
+        errorLog->addError("Expected case, default stmt or close brace before end of file", tokens.at(currentPos).position);
+    }
+
+    if(check(TokenType::CaseKeyword)) {
+        if(_case.get()->body.size() == 0) {
+            _case.get()->body.push_back(std::move(parseCaseStmt()));
+        }
+    }
+
+    return _case;
+}
+
+/*
+ * Questa funzione di occupa del parsing dei default stmt. Questo parsing viene richiamato
+ * solo all'interno dell'elaborazione di uno switch stmt 
+ */
+
+std::unique_ptr<DefaultStmt> Parser::parseDefaultStmt()
+{
+    advance(); //consuma default
+
+    expect(TokenType::Colon);
+
+    auto _default = std::make_unique<DefaultStmt>();
+
+    while(!isAtEnd() && peek().type != TokenType::RBrace && peek().type != TokenType::CaseKeyword) {
+        auto st = parseStatement();
+
+        _default.get()->body.push_back(std::move(st));
+    }
+
+    if(isAtEnd()) {
+        errorLog->addError("expected '}' to close switch stmt before end of file", tokens.at(currentPos).position);
+    }
+
+    if(check(TokenType::CaseKeyword)) {
+        errorLog->addError("invalid case stmt in default", tokens.at(currentPos).position);
+    }
+
+    return _default;
 }
 
 /**

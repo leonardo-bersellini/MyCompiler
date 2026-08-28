@@ -22,6 +22,9 @@ inline const std::unordered_map<std::string, TokenType> keywords = {
     // {"continue", TokenType::ContinueKeyword}, // disabilitato nel codegen
     {"void", TokenType::VoidKeyword},
     {"return", TokenType::ReturnKeyword},
+    {"switch", TokenType::SwitchKeyword},
+    {"case", TokenType::CaseKeyword},
+    {"default", TokenType::DefaultKeyword},
 };
 
 #endif // KEYWORDS_H

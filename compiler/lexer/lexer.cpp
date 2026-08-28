@@ -186,6 +186,10 @@ std::vector<Token> Lexer::analiseString(const std::string &string, ErrorLog &_er
             Token tsemi = createToken(TokenType::Semicolon);
             m_tokens.push_back(tsemi);
         }
+        else if(c == ':') {
+            Token t = createToken(TokenType::Colon);
+            m_tokens.push_back(t);
+        }
         else if(c == ',') {
             Token t = createToken(TokenType::Comma);
             m_tokens.push_back(t);

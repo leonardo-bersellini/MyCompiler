@@ -127,6 +127,30 @@ class BreakStmt : public Stmt {
 class ContinueStmt : public Stmt {
 };
 
+// Switch
+
+class CaseStmt : public Stmt {
+public:  
+    std::unique_ptr<Expr> label; //condizione
+    /*
+     * il body può contenere un altro case, ed in quel caso si tratta dell'unico stmt
+     * contenuto in esso. oppure una serie indefinita di stmt.
+     */
+    std::vector<std::unique_ptr<Stmt>> body; //può puntare ad un altro stmt
+};
+
+class DefaultStmt: public Stmt {
+public:
+    std::vector<std::unique_ptr<Stmt>> body;
+};
+
+class SwitchStmt : public Stmt {
+public:
+    std::unique_ptr<Expr> scrutinee; //espressione controllata su ogni case
+    std::vector<std::unique_ptr<CaseStmt>> cases;
+    std::unique_ptr<DefaultStmt> _default;
+};
+
 class ErrorStmt : public Stmt {
 public:
     //void, placeholder per error stmt

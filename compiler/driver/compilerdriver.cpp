@@ -354,7 +354,8 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
     {
     case OutputKind::Executable :
         {
-            std::string tempObj = options.outputFile + ".o"; // file oggetto temporaneo
+            //file oggetto temporaneo
+            std::string tempObj = std::filesystem::path(options.outputFile).replace_extension(".o").string();
             codegen.buildTargetObj(tempObj, options.verbose);
 
             bool linked = codegen.link(tempObj, options.outputFile, options.verbose);

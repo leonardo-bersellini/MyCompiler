@@ -26,6 +26,11 @@ enum class TokenType {
     ReturnKeyword,
     VoidKeyword,
 
+    SwitchKeyword,
+    CaseKeyword,
+    DefaultKeyword,
+
+
     BreakKeyword,
     ContinueKeyword,
 
@@ -53,7 +58,8 @@ enum class TokenType {
     LBrace,     //{}
     RBrace,
 
-    Semicolon,
+    Semicolon,  //;
+    Colon,      //:
     Comma,
     EndOfFile,
     Unknown,
