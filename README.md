@@ -1,9 +1,8 @@
 # Bismuth Compiler
 
-> Bismuth Compiler — a hobby compiler written in C++ and LLVM, from lexer to object file.
+> Bismuth Compiler — a hobby compiler written in C++ with LLVM, from lexer to executable.
 
-This compiler does not aim to be a good tool to compile C++ or to replace any other existing program.
-It is only a stand-alone project built as a personal learning project, to explore compiler design and LLVM from the ground up.
+Bismuth is a standalone compiler written in C++, using LLVM as its backend, developed as a personal project to explore compiler design from the ground up.
 
 **Work in Progress**
 
@@ -13,9 +12,9 @@ Go to the "Quick Start" section to try the compiler, or read the code and let us
 
 ## Overview
 
-Bismuth is a personal compiler written from scratch in C++, using LLVM as backend code-generator. The project is built by a self-taught programmer, with the goal of publicly showcasing the code and gaining hands-on experience building a complete compiler — from tokenization to the production of an object file.
+Bismuth is a compiler written from scratch in C++, using LLVM as its backend for code generation. The project is built with the goal of publicly showcasing the code and gaining hands-on experience building a complete compiler — from tokenization to the production of an object file.
 
-It is not intended as a production-ready language, but as a learning path through compiler architecture, syntactic/semantic analysis, and code generation via LLVM.
+The project is continuously evolving, becoming progressively more complete and realistic while exploring compiler architecture, semantic analysis, and code generation with LLVM.
 
 ---
 
@@ -32,7 +31,8 @@ It is not intended as a production-ready language, but as a learning path throug
 - **AST** — tree representation of the program, Expr/Stmt nodes
 - **SemanticAnalyzer** — checks types, scopes, and the language's semantic rules
 - **Codegen** — translates the AST into LLVM IR
-- **Object file** — the IR is compiled into an object file through the LLVM backend
+- **Object file** — LLVM compiles the generated IR into target-specific machine code and produces an object file.
+- **Executable** — the object file is linked with the required runtime and linker components to produce an executable.
 
 📖 In-depth documentation: see the documented code in the project.
 
@@ -46,6 +46,7 @@ It is not intended as a production-ready language, but as a learning path throug
 - `if` / `elif` / `else`
 - `for`, `while`
 - `break`, `continue`
+- `switch`
 - Function declaration, `return`
 
 **Supported expressions**
@@ -59,41 +60,52 @@ It is not intended as a production-ready language, but as a learning path throug
 ## Requirements
 
 **To use the compiler** (pre-built release)
-- No particular requirements — the necessary linker is already included in the with all the lib files
+
+- No particular requirements — the release package includes the required linker and runtime libraries
+- Windows 64-bit
 
 **To build from source / contribute**
 - LLVM 18.1.8
 - CMake ≥ 3.16
-- C++20 compiler (MinGW/UCRT64)
+- C++20 compiler
+- MinGW/UCRT64 toolchain
 
 ---
 
 ## Quick Start
 
+Choose one of the following options:
 
-**Download the compiled code from the latest release**
+### • Download the compiled code from the latest release
 
-Go to the release section and select a version-release, then download and exctract the packages to use the compiler.
+Go to the release section and select the latest version, then download and extract the packages to use the compiler.
 
 From this repository: `Releases` > `Bismuth Vx.x.x` > `bismuth-Vx.x.x-win64.zip`
 
----
 
-**Build from source**
+### • Build from source
 
-If you prefer to build this project from source, you can use cmake.
+If you prefer to build this project from source, you can use CMake.
 
 Download the repository source code from: `Code` > `Download zip`
 
-Then build with cmake:
+Then follow those steps:
 
-```
-cmake -B build -DLLVM_DIR="/path/to/llvm-install/lib/cmake/llvm"
+```bash
+# clone the repository
+git clone https://github.com/leonardo-bersellini/MyCompiler 
+cd mycompiler
+
+# if you downloaded the zip 
+cd bismuth-vx.x.x-win64 
+
+# then build with cmake
+cmake -S . -B build -DLLVM_DIR="/path/to/llvm-install/lib/cmake/llvm"
 cmake --build build
 ```
 
-Note: llvm is not included in this repository, so you need to build it from source and include it
-in the cmake-prefix-path using the path on your device.
+> Note: LLVM is not included in this repository. You need to have LLVM 18.1.8
+> installed on your system and provide its CMake path through `LLVM_DIR`.
 
 ---
 
@@ -102,7 +114,7 @@ in the cmake-prefix-path using the path on your device.
 | Flag | Function |
 |------|----------|
 | `-o <file>` | Compiles and produces an object file (`.obj`) |
-| `-e <file>` | Compiles, link and produces an exe file (`.exe`) |
+| `-e <file>` | Compiles, links and produces an exe file (`.exe`) |
 | `--llvm-ir` | Prints the generated LLVM IR to stdout |
 | `--verbose` | Shows detailed information during execution |
 
@@ -139,10 +151,11 @@ bin/
 
 ---
 
-## Roadmap / TODO
+## Roadmap 
 
-The language is being expanded, with the goal of gradually moving toward a syntax closer to C++. Contributions and suggestions are welcome.
-The main goal of this project its just the exploration of compilers for personal fun.
+The language is continuously evolving, with new features and improvements being added over time. The long-term direction is to gradually move toward a more complete and realistic language and compiler, with syntax increasingly inspired by C++.
+
+Contributions, suggestions, and feedback are welcome.
 
 ---
 
