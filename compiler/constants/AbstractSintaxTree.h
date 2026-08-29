@@ -91,6 +91,7 @@ public:
 class DeclarationStmt : public Stmt {
 public:
     ValueType type;
+    bool isConst = false;
     std::string name;
     std::unique_ptr<Expr> initializer; //contiene le informazioni di un'eventuale inizializzazione
 };
@@ -159,8 +160,13 @@ public:
 // Functions
 
 struct FunctionParam {
+public:
+    explicit FunctionParam(const ValueType& t, const std::string& s, const bool& c)
+            : type(t), name(s), isConst(c) {}
+            
     ValueType type;
     std::string name;
+    bool isConst = false;
 };
 
 class FunctionStmt : public Stmt {

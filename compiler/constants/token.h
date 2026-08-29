@@ -25,6 +25,7 @@ enum class TokenType {
     WhileKeyword,
     ReturnKeyword,
     VoidKeyword,
+    ConstKeyword,
 
     SwitchKeyword,
     CaseKeyword,

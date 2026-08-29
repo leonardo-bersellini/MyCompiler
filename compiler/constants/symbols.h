@@ -14,7 +14,10 @@
  **/
 
 struct SymbolInfo {
+public:
+    explicit SymbolInfo(const ValueType& t, const bool& c) : type(t), isConst(c) {}
     ValueType type;
+    bool isConst;
 };
 
 /** FUNCTION INFO

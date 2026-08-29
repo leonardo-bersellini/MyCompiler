@@ -108,6 +108,17 @@ std::unique_ptr<Stmt> Parser::parseStatement()
         else
             return parseDeclarationStmt();
     }
+    else if(check(TokenType::ConstKeyword)) 
+    {
+        //Dichiarazione const
+
+        if(peek(1).type == TokenType::TypeKeyword) {
+            return parseDeclarationStmt(true);
+        } else {
+            errorLog->addError("expected declaration after const keyword", tokens.at(currentPos).position);
+            advance(); //consuma const
+        }
+    }
     else if(check(TokenType::ReturnKeyword))
     {
         // Return stmt
@@ -254,8 +265,12 @@ std::unique_ptr<Stmt> Parser::parseAssignStmt()
  * ovvero int x; e int x = 5;
  */
 
-std::unique_ptr<Stmt> Parser::parseDeclarationStmt()
+std::unique_ptr<Stmt> Parser::parseDeclarationStmt(bool isConstDeclaration)
 {
+    if(isConstDeclaration) {
+        advance(); //consuma 'const'
+    }
+
     if(peek(2).type == TokenType::Equal)
     {
         // --- Dichiarazione con inizializzazione --- //
@@ -276,6 +291,7 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt()
 
         auto d = std::make_unique<DeclarationStmt>();
         d->type = Type::toValueType(type); //std::string -> ValueType
+        d->isConst = isConstDeclaration;
         d->name = name;
         d->initializer = std::move(initExpr);
         return d;
@@ -293,6 +309,7 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt()
 
         auto d = std::make_unique<DeclarationStmt>();
         d->type = Type::toValueType(type); //std::string -> ValueType
+        d->isConst = isConstDeclaration;
         d->name = name;
         d->initializer = nullptr; //nessun initializer
         return d;
@@ -321,10 +338,16 @@ std::unique_ptr<Stmt> Parser::parseFunctionStmt()
 
     while(!check(TokenType::RParen) && !isAtEnd())
     {
+        bool isConst = false;
+        if(check(TokenType::ConstKeyword)) {
+            advance();
+            isConst = true;
+        }
+
         ValueType paramType = Type::toValueType(advance().lexeme); // consuma tipo parametro
         std::string paramName = advance().lexeme;                 // consuma nome parametro
 
-        params.push_back(FunctionParam{paramType, paramName});
+        params.push_back(FunctionParam(paramType, paramName, isConst));
 
         if(check(TokenType::Comma))
             advance(); // consuma ',' se c'è un altro parametro
@@ -492,7 +515,7 @@ std::unique_ptr<Stmt> Parser::parseSwitchStmt()
 
     //creazione dello switch
     auto _switch = std::make_unique<SwitchStmt>();
-    _switch.get()->scrutinee = std::move(cond);
+    _switch->scrutinee = std::move(cond);
 
     bool foundDefault = false;
 
@@ -502,12 +525,12 @@ std::unique_ptr<Stmt> Parser::parseSwitchStmt()
         if(check(TokenType::CaseKeyword)) 
         {
             auto _case = std::move(parseCaseStmt()); 
-            _switch.get()->cases.push_back(std::move(_case));
+            _switch->cases.push_back(std::move(_case));
         }
         else if(check(TokenType::DefaultKeyword)) 
         {
             if(!foundDefault) {
-                _switch.get()->_default = std::move(parseDefaultStmt());
+                _switch->_default = std::move(parseDefaultStmt());
                 foundDefault = true;
             } else {
                 errorLog->addError("invalid second default in switch", tokens.at(currentPos).position);
@@ -545,7 +568,7 @@ std::unique_ptr<CaseStmt> Parser::parseCaseStmt()
     advance(); //consuma case
 
     auto _case = std::make_unique<CaseStmt>();
-    _case.get()->label = std::move(parseExpr());
+    _case->label = std::move(parseExpr());
             
     expect(TokenType::Colon);
 
@@ -554,7 +577,7 @@ std::unique_ptr<CaseStmt> Parser::parseCaseStmt()
     {
         auto st = parseStatement();
 
-        _case.get()->body.push_back(std::move(st));
+        _case->body.push_back(std::move(st));
     }
 
     if(isAtEnd()) {
@@ -562,8 +585,8 @@ std::unique_ptr<CaseStmt> Parser::parseCaseStmt()
     }
 
     if(check(TokenType::CaseKeyword)) {
-        if(_case.get()->body.size() == 0) {
-            _case.get()->body.push_back(std::move(parseCaseStmt()));
+        if(_case->body.size() == 0) {
+            _case->body.push_back(std::move(parseCaseStmt()));
         }
     }
 
@@ -586,7 +609,7 @@ std::unique_ptr<DefaultStmt> Parser::parseDefaultStmt()
     while(!isAtEnd() && peek().type != TokenType::RBrace && peek().type != TokenType::CaseKeyword) {
         auto st = parseStatement();
 
-        _default.get()->body.push_back(std::move(st));
+        _default->body.push_back(std::move(st));
     }
 
     if(isAtEnd()) {

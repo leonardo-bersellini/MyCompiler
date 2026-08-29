@@ -177,15 +177,21 @@ void SemanticAnalyzer::analyzeAssignment(const AssignmentStmt* s)
     // risultato dell'espressione di assegnazione, valore che si sta assegnando
     ExprAnalysisResult valueResult = analyzeExpr(s->value.get());
 
-    if (symbolExistsAnywhere(s->name))
+    if(symbolExistsAnywhere(s->name))
     {
-        /* Controllo di tipo nell'operatore di assegnazione */
+        // Controllo di tipo nell'operatore di assegnazione 
         ValueType varType = lookupSymbolInfo(s->name).type;
 
         if (!Type::isAssignmentCompatible(varType, valueResult.value_type)) {
             errorLog->addError("tipo incompatibile nell'assegnazione a " + s->name + "  " +
                                "[confronto tra " + Type::toString(varType) + " e " + Type::toString(valueResult.value_type) + "]");
         }
+
+        //controllo isconst
+        if(lookupSymbolInfo(s->name).isConst) {
+            errorLog->addError("forbidden assignment of const variable \'" + s->name + "\'");
+        }
+
     } else {
         errorLog->addError("variabile non dichiarata: " + s->name);
     }
@@ -195,6 +201,12 @@ void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
 {
     if(s->type == ValueType::Void) { 
         errorLog->addError("variable " + s->name + " declared void");
+        return;
+    }
+
+    if(s->isConst && !s->initializer) {
+        errorLog->addError("could not declare a const variable without initialization");
+        declareSymbol(s->name, SymbolInfo(s->type, false)); // dichiarato ma non const, per evitare errori a cascata
         return;
     }
 
@@ -212,7 +224,7 @@ void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
     if (symbolExistsInCurrentScope(s->name)) {
         errorLog->addError("redeclaration of variable: " + s->name);
     } else {
-        declareSymbol(s->name, SymbolInfo{s->type});
+        declareSymbol(s->name, SymbolInfo(s->type, s->isConst));
     }
 }
 
@@ -224,22 +236,21 @@ void SemanticAnalyzer::analyseFunction(const FunctionStmt* s)
         return;
     }
 
-    // --- raccolta dei tipi dei parametri --- //
+    //raccolta dei type dei parametri
     std::vector<ValueType> paramsType;
 
     for(const FunctionParam& p : s->params) {
         paramsType.push_back(p.type);
     }
 
-    // --- insert nella tabella --- //
     functionTable.insert({s->name, FunctionInfo{s->returnType, paramsType}});
 
-    // --- analisi del codice della funzione --- //
+    //scope locale alla funzione
     pushScope();
 
     // dichiarazione dei parametri come variabili nello scope
     for(const FunctionParam& p : s->params) {
-        declareSymbol(p.name, SymbolInfo{p.type});
+        declareSymbol(p.name, SymbolInfo(p.type, p.isConst));
     }
 
     currentFunction = &functionTable[s->name];
@@ -365,6 +376,7 @@ void SemanticAnalyzer::analyzeCase(const CaseStmt* s, const ValueType& switch_ty
     if(condResult.value_type != switch_type) {
         //non considera nessuna promozione automatica
         errorLog->addError("case label value in incompatible with switch value");
+        return;
     }
 
     //ogni label deve essere un valore costante a compile time
@@ -567,7 +579,7 @@ SymbolInfo SemanticAnalyzer::lookupSymbolInfo(const std::string &name) const {
     for(int i = scopeStack.size() - 1; i >= 0; i--) {
         if (scopeStack[i].contains(name)) return scopeStack[i].at(name);
     }
-    return SymbolInfo{ValueType::Error}; // non trovato
+    return SymbolInfo(ValueType::Error, false); // non trovato
 }
 
 /*

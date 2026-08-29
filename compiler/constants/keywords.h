@@ -25,6 +25,7 @@ inline const std::unordered_map<std::string, TokenType> keywords = {
     {"switch", TokenType::SwitchKeyword},
     {"case", TokenType::CaseKeyword},
     {"default", TokenType::DefaultKeyword},
+    {"const", TokenType::ConstKeyword},
 };
 
 #endif // KEYWORDS_H

@@ -36,7 +36,7 @@ private:
 
     std::unique_ptr<Stmt> parseScopeStmt();
     std::unique_ptr<Stmt> parseAssignStmt();
-    std::unique_ptr<Stmt> parseDeclarationStmt();
+    std::unique_ptr<Stmt> parseDeclarationStmt(bool isConstDeclaration = false);
     std::unique_ptr<Stmt> parseFunctionStmt();
     std::unique_ptr<Stmt> parseReturnStmt();
     std::unique_ptr<Stmt> parseIfStmt();
