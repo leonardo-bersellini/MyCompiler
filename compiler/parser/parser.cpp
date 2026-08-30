@@ -4,7 +4,9 @@
 #include <iostream>
 #include "keywords.h"
 
-Parser::Parser() {}
+Parser::Parser() 
+    : recoveryHandler(errorLog, tokens, currentPos)
+{}
 
 Token Parser::peek(int offset) const
 {
@@ -41,9 +43,12 @@ bool Parser::check(TokenType type) const {
 /*
  * Restutuisce true se il tokentype assegnato ad essa corrisponde al token futuro nella lista.
  * In caso contrario, restituisce false ed aggiunge un log di errore.
+ * 
+ * Se specificato (flag bool), esegue un recovery di default, ovvero ghost recovery, per i
+ * casi più probabili.
  */
 
-bool Parser::expect(TokenType type) {
+bool Parser::expect(TokenType type, bool applyGhostRecovery) {
     if(peek().type == type) {
         advance(); //consuma il token atteso
         return true;
@@ -52,7 +57,13 @@ bool Parser::expect(TokenType type) {
         t.type = type;
         errorLog->addError("Expected " + typeToString(t.type) + " before " + typeToString(peek().type),
                            tokens.at(currentPos).position);
-        advance(); //error recovery, salta il token errato
+
+        //recovery di default
+        if(applyGhostRecovery) {
+            recoveryHandler.ghostToken(type);
+        }
+
+        return false;
     }
     return false;
 }
@@ -161,7 +172,7 @@ std::unique_ptr<Stmt> Parser::parseStatement()
         // Continue Instruction
 
         advance();                       // consuma 'continue'
-        expect(TokenType::Semicolon);    // consuma ';'
+        expect(TokenType::Semicolon, true);    // consuma ';'
         return std::make_unique<ContinueStmt>();
 
     } else {
@@ -198,7 +209,7 @@ std::unique_ptr<Stmt> Parser::parseStatement()
 
 std::unique_ptr<Stmt> Parser::parseScopeStmt()
 {
-    expect(TokenType::LBrace); // verifica e consuma '{'
+    expect(TokenType::LBrace, true); // verifica '{'
 
     auto scope = std::make_unique<BlockStmt>();
 
@@ -248,9 +259,10 @@ std::unique_ptr<Stmt> Parser::parseBranchBody()
 std::unique_ptr<Stmt> Parser::parseAssignStmt()
 {
     std::string name = advance().lexeme; //consuma l'identificatore
-    advance();                       //consuma '='
-    auto expr = parseExpr();   //rimangono i token dell'espressione
-    expect(TokenType::Semicolon);    //expect ; after
+    advance();                          //consuma '='
+    auto expr = parseExpr();            //rimangono i token dell'espressione
+
+    expect(TokenType::Semicolon, true);     //expect ; after
 
     //ritorna uno stmt di assegnazione
     auto stmt = std::make_unique<AssignmentStmt>();
@@ -279,8 +291,8 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt(bool isConstDeclaration)
         std::string name = peek().lexeme;           // legge il nome presumendo che sia un identifier
         bool isValid = expect(TokenType::Identifier); // verifica identifier e lo consuma
 
-        if(!isValid)
-        {
+        if(!isValid) {
+            recoveryHandler.synchronize({TokenType::Semicolon, TokenType::RParen});
             return std::make_unique<ErrorStmt>();;
         }
 
@@ -303,9 +315,13 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt(bool isConstDeclaration)
 
         std::string name = peek().lexeme;     // legge Identifier
         bool isValid = expect(TokenType::Identifier);
-        if(!isValid) return std::make_unique<ErrorStmt>();
 
-        expect(TokenType::Semicolon);
+        if(!isValid) {
+            recoveryHandler.synchronize({TokenType::Semicolon, TokenType::RParen});
+            return std::make_unique<ErrorStmt>();
+        }
+
+        expect(TokenType::Semicolon, true);
 
         auto d = std::make_unique<DeclarationStmt>();
         d->type = Type::toValueType(type); //std::string -> ValueType
@@ -329,9 +345,12 @@ std::unique_ptr<Stmt> Parser::parseFunctionStmt()
     bool valid = expect(TokenType::Identifier);
 
     if(returnType == ValueType::Error) errorLog->addError("error: returning <errortype> in function: " + identifier);
-    if(!valid) return std::make_unique<ErrorStmt>();
+    if(!valid) {
+        recoveryHandler.synchronize({TokenType::TypeKeyword});
+        return std::make_unique<ErrorStmt>();
+    }
 
-    expect(TokenType::LParen);
+    expect(TokenType::LParen, true);
 
     // --- parametri --- //
     std::vector<FunctionParam> params;
@@ -353,7 +372,7 @@ std::unique_ptr<Stmt> Parser::parseFunctionStmt()
             advance(); // consuma ',' se c'è un altro parametro
     }
 
-    expect(TokenType::RParen);
+    expect(TokenType::RParen, true);
 
     auto body = parseScopeStmt();
 
@@ -382,7 +401,7 @@ std::unique_ptr<Stmt> Parser::parseReturnStmt()
         advance();
     } else {
         r->value = parseExpr();
-        expect(TokenType::Semicolon); //consuma ;
+        expect(TokenType::Semicolon, true); //consuma ;
     }
 
     return r;
@@ -396,9 +415,9 @@ std::unique_ptr<Stmt> Parser::parseReturnStmt()
 std::unique_ptr<Stmt> Parser::parseIfStmt()
 {
     advance();                      //consuma 'if' oppure 'elif'
-    expect(TokenType::LParen);
+    expect(TokenType::LParen, true);
     auto condition = parseExpr();   // Lettura della condizione tra parentesi
-    expect(TokenType::RParen);
+    expect(TokenType::RParen, true);
 
     // if body
     std::unique_ptr<Stmt> body;
@@ -442,7 +461,7 @@ std::unique_ptr<Stmt> Parser::parseForStmt()
 
     auto forStmt = std::make_unique<ForStmt>();
 
-    expect(TokenType::LParen);
+    expect(TokenType::LParen, true);
 
     // --- controllo init --- //
 
@@ -461,7 +480,7 @@ std::unique_ptr<Stmt> Parser::parseForStmt()
         auto cond = parseExpr();
         forStmt->condition = std::move(cond);
 
-        expect(TokenType::Semicolon);
+        expect(TokenType::Semicolon, true);
     }
 
     // --- controllo update --- //
@@ -471,7 +490,7 @@ std::unique_ptr<Stmt> Parser::parseForStmt()
         auto update = parseExpr();
         forStmt->update = std::move(update);
 
-        expect(TokenType::RParen);
+        expect(TokenType::RParen, true);
     }
 
     auto body = parseBranchBody();
@@ -488,9 +507,9 @@ std::unique_ptr<Stmt> Parser::parseWhileStmt()
 {
     advance(); //consuma 'while'
 
-    expect(TokenType::LParen);
+    expect(TokenType::LParen, true);
     auto cond = parseExpr();
-    expect(TokenType::RParen);
+    expect(TokenType::RParen, true);
 
     auto body = parseBranchBody();
 
@@ -509,9 +528,9 @@ std::unique_ptr<Stmt> Parser::parseSwitchStmt()
 {
     advance(); //consuma switch
 
-    expect(TokenType::LParen);
+    expect(TokenType::LParen, true);
     auto cond = parseExpr();
-    expect(TokenType::RParen);
+    expect(TokenType::RParen, true);
 
     //creazione dello switch
     auto _switch = std::make_unique<SwitchStmt>();
@@ -519,7 +538,7 @@ std::unique_ptr<Stmt> Parser::parseSwitchStmt()
 
     bool foundDefault = false;
 
-    expect(TokenType::LBrace);
+    expect(TokenType::LBrace, true);
     while(!isAtEnd() && peek().type != TokenType::RBrace) 
     {
         if(check(TokenType::CaseKeyword)) 
@@ -545,7 +564,7 @@ std::unique_ptr<Stmt> Parser::parseSwitchStmt()
     if(isAtEnd()) {
         errorLog->addError("Expected '}' before end of file", tokens.at(currentPos).position);
     } else {
-        bool closed = expect(TokenType::RBrace);
+        bool closed = expect(TokenType::RBrace, true);
 
         if(!closed) {
             auto s = std::make_unique<ErrorStmt>();
@@ -570,7 +589,7 @@ std::unique_ptr<CaseStmt> Parser::parseCaseStmt()
     auto _case = std::make_unique<CaseStmt>();
     _case->label = std::move(parseExpr());
             
-    expect(TokenType::Colon);
+    expect(TokenType::Colon, true);
 
     while(!isAtEnd() && peek().type != TokenType::CaseKeyword && peek().type != TokenType::RBrace 
     && peek().type != TokenType::DefaultKeyword)
@@ -602,7 +621,7 @@ std::unique_ptr<DefaultStmt> Parser::parseDefaultStmt()
 {
     advance(); //consuma default
 
-    expect(TokenType::Colon);
+    expect(TokenType::Colon, true);
 
     auto _default = std::make_unique<DefaultStmt>();
 
@@ -858,7 +877,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
         auto call = std::make_unique<CallExpr>();
 
         call->name = advance().lexeme;
-        expect(TokenType::LParen);
+        expect(TokenType::LParen, true);
 
         std::vector<std::unique_ptr<Expr>> args;
 
@@ -869,7 +888,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
             if(check(TokenType::Comma))
                 advance(); // consuma ',' se c'è un altro argomento
         }
-        expect(TokenType::RParen);
+        expect(TokenType::RParen, true);
 
         call->args = std::move(args);
         return call;
@@ -891,7 +910,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
         advance(); //consuma il token '('
 
         auto expr = parseExpr(); //call ricorsiva
-        expect(TokenType::RParen);
+        expect(TokenType::RParen, true);
         return expr;
     }
 
@@ -910,7 +929,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
     else {
         errorLog->addError("Parse error. Expected a factor, received a different token. token: " +
                                typeToString(tokens.at(currentPos).type), peek().position);
-        advance(); //error recovery, salta il token errato
+        recoveryHandler.skipToken();
         auto error = std::make_unique<ErrorExpr>();
         return error;
     }

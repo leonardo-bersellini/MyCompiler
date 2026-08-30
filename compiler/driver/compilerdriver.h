@@ -8,6 +8,8 @@
 #include "flags.h"
 #include "commandlineparser/commandlineparser.h"
 
+#include "errors/errorlog.h"
+
 struct ParsedFlag {
     std::string name;
     std::optional<std::string> value;
@@ -28,6 +30,7 @@ private:
 
     void reportCliError(const std::string &message) const;
     void reportCliMsg(const std::string &message) const;
+    void reportCompilationOutcome(const ErrorLog& errorLog, const CompilerOptions& options);
 
     bool parseArguments(int argc, char* argv[], CompilerOptions &options);
     bool validateOptions(CompilerOptions &options);

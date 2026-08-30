@@ -375,7 +375,7 @@ void SemanticAnalyzer::analyzeCase(const CaseStmt* s, const ValueType& switch_ty
 
     if(condResult.value_type != switch_type) {
         //non considera nessuna promozione automatica
-        errorLog->addError("case label value in incompatible with switch value");
+        errorLog->addError("case label value is incompatible with switch value");
         return;
     }
 

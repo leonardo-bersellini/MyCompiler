@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "token.h"
-#include "errorlog/errorlog.h"
+#include "errors/errorlog.h"
 
 class Lexer
 {

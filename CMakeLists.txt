@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(MyCompiler 
-    VERSION 1.6.6
+    VERSION 1.7.0
     LANGUAGES CXX
     DESCRIPTION "Bismuth: compilatore sviluppato in C++ e LLVM"
 )
@@ -43,7 +43,8 @@ add_executable(Bismuth
   compiler/constants/AbstractSintaxTree.h compiler/constants/keywords.h compiler/constants/symbols.h compiler/constants/token.h compiler/constants/types.h
   compiler/driver/compilerdriver.cpp compiler/driver/compilerdriver.h compiler/driver/flags.h compiler/driver/options.h
   compiler/driver/commandlineparser/commandlineparser.h compiler/driver/commandlineparser/commandlineparser.cpp
-  compiler/errorlog/errorlog.cpp compiler/errorlog/errorlog.h
+  compiler/errors/errorlog.cpp compiler/errors/errorlog.h
+  compiler/errors/recovery/recoveryhandler.cpp compiler/errors/recovery/recoveryhandler.h
   compiler/lexer/lexer.cpp compiler/lexer/lexer.h
   compiler/parser/parser.cpp compiler/parser/parser.h
   compiler/semantics/semanticanalyzer.cpp compiler/semantics/semanticanalyzer.h

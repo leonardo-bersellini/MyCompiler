@@ -8,7 +8,7 @@
 #include "lexer/lexer.h"
 #include "parser/parser.h"
 #include "semantics/semanticanalyzer.h"
-#include "errorlog/errorlog.h"
+#include "errors/errorlog.h"
 #include "codegen/codegenerator.h"
 
 #include "commandlineparser/commandlineparser.h"
@@ -42,6 +42,25 @@ void CompilerDriver::reportCliError(const std::string &message) const
 void CompilerDriver::reportCliMsg(const std::string &message) const
 {
     std::cout << message << std::endl;
+}
+
+/*
+ * Metodo helper che centralizza la logica di output di errori e warnings.
+ */
+
+void CompilerDriver::reportCompilationOutcome(const ErrorLog& errorLog, const CompilerOptions& options)
+{
+    if(options.verbose) {
+        errorLog.printAll();
+    } else {
+        errorLog.printErrors(); 
+    }
+
+    if(options.emitIR) {
+        reportCliError("could not solve specified options for compiler execution [code-steps-not-generated]");
+    }
+
+    return;
 }
 
 /*
@@ -247,7 +266,7 @@ int CompilerDriver::execute(const CompilerOptions &options)
         reportCliMsg("\nexecution returned with exit code 0");
     }
 
-    return 0;
+    return good ? 0 : 1;;
 }
 
 /*
@@ -267,45 +286,30 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
     // Lettura e parsing del codice, indipendente dai flags
     const std::vector<Token> tokens = lexer.analiseString(source, errorLog);
 
-    if(errorLog.hasErrors()) {
+    if(errorLog.hasErrors())
+    {
         reportCliError("lexer execution return error code: typo error");
-
-        if(options.verbose) {
-            errorLog.printErrors();
-        }
-        if(options.emitIR) {
-            reportCliError("could not solve specified options for compiler execution [code-steps-not-generated]");
-        }
-
+        reportCompilationOutcome(errorLog, options);
+        
         return false;
     }
 
     auto program = parser.parseProgram(tokens, errorLog);
 
-    if(errorLog.hasErrors()) {
+    if(errorLog.hasErrors()) 
+    {
         reportCliError("parser execution return error code: syntax error");
-
-        if(options.verbose) {
-            errorLog.printErrors();
-        }
-        if(options.emitIR) {
-            reportCliError("could not solve specified options for compiler execution [code-steps-not-generated]");
-        }
+        reportCompilationOutcome(errorLog, options);
 
         return false;
     }
 
     analyzer.analyzeProgram(*program.get(), errorLog);
 
-    if(errorLog.hasErrors()) {
+    if(errorLog.hasErrors()) 
+    {
         reportCliError("analyzer execution return error code: semantic error");
-
-        if(options.verbose) {
-            errorLog.printErrors();
-        }
-        if(options.emitIR) {
-            reportCliError("could not solve specified options for compiler execution [code-steps-not-generated]");
-        }
+        reportCompilationOutcome(errorLog, options);
 
         return false;
     }

@@ -47,6 +47,7 @@ The project is continuously evolving, becoming progressively more complete and r
 - `for`, `while`
 - `break`, `continue`
 - `switch`
+- `const`, const declarations and parameters
 - Function declaration, `return`
 
 **Supported expressions**

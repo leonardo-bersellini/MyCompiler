@@ -6,7 +6,8 @@
 
 #include "token.h"
 #include "AbstractSintaxTree.h"
-#include "errorlog/errorlog.h"
+#include "errors/errorlog.h"
+#include "errors/recovery/recoveryhandler.h"
 
 #include "symbols.h"
 
@@ -20,7 +21,9 @@ public:
 private:
     std::vector<Token> tokens;
     int currentPos; //indice del token corrente
+
     ErrorLog* errorLog;
+    RecoveryHandler recoveryHandler;
 
     Token peek(int offset = 0) const;
     Token advance();
@@ -28,7 +31,7 @@ private:
     bool isAtEnd() const;
     bool isAtEnd(int pos) const;
     bool check(TokenType type) const;
-    bool expect(TokenType type);
+    bool expect(TokenType type, bool applyGhostRecovery = false);
 
     std::unique_ptr<Stmt> parseStatement();
 

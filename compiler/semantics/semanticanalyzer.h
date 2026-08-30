@@ -6,7 +6,7 @@
 
 #include "symbols.h"
 #include "AbstractSintaxTree.h"
-#include "errorlog/errorlog.h"
+#include "errors/errorlog.h"
 
 // struttura di ritorno dell'analisi delle espressioni, racchiude i dati di analisi
 struct ExprAnalysisResult {
