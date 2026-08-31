@@ -46,17 +46,30 @@ void CompilerDriver::reportCliMsg(const std::string &message) const
 
 /*
  * Metodo helper che centralizza la logica di output di errori e warnings.
+ *
+ * Regole di output:
+ * - gli errori sono sempre mostrati
+ * - i warnings sono sempre mostrati (disattivati con un flag)
  */
 
 void CompilerDriver::reportCompilationOutcome(const ErrorLog& errorLog, const CompilerOptions& options)
 {
-    if(options.verbose) {
+    if(options.verbose && options.hideWarnings) 
+    {
+        reportCliMsg("note: ignored flag hide-warnings because of verbose mode");
         errorLog.printAll();
-    } else {
-        errorLog.printErrors(); 
+    } 
+    else if(options.verbose) {
+        errorLog.printAll(); 
+    }
+    else if(options.hideWarnings) {
+        errorLog.printErrors();
+    }
+    else {
+        errorLog.printAll();
     }
 
-    if(options.emitIR) {
+    if(errorLog.hasErrors() && options.emitIR) {
         reportCliError("could not solve specified options for compiler execution [code-steps-not-generated]");
     }
 
@@ -106,19 +119,19 @@ void CompilerDriver::initCommandLineParser()
     for(const PipelineFlag& flag : pipelineFlags)
     {
         if(flag.requiresValue) {
-            CommandLineOption option(flag.name, flag.description, "value");
+            CommandLineOption option(flag.names, flag.description, "value");
             //il terzo parametro indica il nome placeholder mostrato nell'helper
             //la sola presenza di questo parametro inizializzato indica che il comando necessita di un valore
             parser.addOption(option);
         } else {
-            CommandLineOption option(flag.name, flag.description);
+            CommandLineOption option(flag.names, flag.description);
             parser.addOption(option);
         }
     }
 
     for(const UtilityFlag& flag : utilityFlags)
     {
-        CommandLineOption option(flag.name, flag.description);
+        CommandLineOption option(flag.names, flag.description);
         parser.addOption(option);
     }
 }
@@ -148,7 +161,7 @@ bool CompilerDriver::parseArguments(int argc, char* argv[], CompilerOptions &opt
 
     for(const PipelineFlag& flag : pipelineFlags)
     {
-        if (!parser.isSet(flag.name)) {
+        if (!parser.isSet(flag.names[0])) {
             continue;
         }
 
@@ -162,13 +175,13 @@ bool CompilerDriver::parseArguments(int argc, char* argv[], CompilerOptions &opt
         options.outkind = flag.resultingKind;
 
         if (flag.requiresValue && flag.valueTarget != nullptr) {
-            options.*(flag.valueTarget) = parser.value(flag.name);
+            options.*(flag.valueTarget) = parser.value(flag.names[0]);
         }
     }
 
     // Utility flags: nessun vincolo, ognuno indipendente
     for (const UtilityFlag &flag : utilityFlags) {
-        options.*(flag.target) = parser.isSet(flag.name);
+        options.*(flag.target) = parser.isSet(flag.names[0]);
     }
 
     return true;
@@ -283,6 +296,8 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
     ErrorLog errorLog;
     CodeGenerator codegen;
 
+    errorLog.addWarning("test warning");
+
     // Lettura e parsing del codice, indipendente dai flags
     const std::vector<Token> tokens = lexer.analiseString(source, errorLog);
 
@@ -313,6 +328,9 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
 
         return false;
     }
+
+    // esecuzione finale, si raggiunge solo con i warning
+    reportCompilationOutcome(errorLog, options);
 
     // Generazione degli stmt di codice llvm ir
     codegen.generate(*program.get());

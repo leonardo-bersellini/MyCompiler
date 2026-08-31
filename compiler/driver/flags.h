@@ -18,7 +18,7 @@
  */
 
 struct PipelineFlag {
-    std::string name;
+    std::vector<std::string> names;
     bool requiresValue;
     std::string description;
     OutputKind resultingKind;
@@ -26,8 +26,8 @@ struct PipelineFlag {
 };
 
 inline const std::vector<PipelineFlag> pipelineFlags = {
-    { "o", true, "Compile and assemble, but do not link (produces .obj)", OutputKind::ObjectFile, &CompilerOptions::outputFile},
-    { "e", true, "Generate an executable from source (produces .exe)", OutputKind::Executable, &CompilerOptions::outputFile},
+    { {"o"}, true, "Compile and assemble, but do not link (produces .obj)", OutputKind::ObjectFile, &CompilerOptions::outputFile},
+    { {"e"}, true, "Generate an executable from source (produces .exe)", OutputKind::Executable, &CompilerOptions::outputFile},
 };
 
 /**
@@ -41,15 +41,16 @@ inline const std::vector<PipelineFlag> pipelineFlags = {
  */
 
 struct UtilityFlag {
-    std::string name;
+    std::vector<std::string> names;
     std::string description;
     bool CompilerOptions::* target;
 };
 
 inline const std::vector<UtilityFlag> utilityFlags = {
-    { "llvm-ir", "Print generated LLVM IR to stdout", &CompilerOptions::emitIR },
-    { "verbose", "Show detailed information during the execution.", &CompilerOptions::verbose},
-    { "no-generation", "Execute the compiler process without generating any file as output", &CompilerOptions::noOutputFile},
+    { {"IR", "llvm-ir"}, "Print generated LLVM IR to stdout", &CompilerOptions::emitIR },
+    { {"Vb", "verbose"}, "Show detailed information during the execution.", &CompilerOptions::verbose},
+    { {"no-generation"}, "Execute the compiler process without generating any file as output", &CompilerOptions::noOutputFile},
+    { {"Wh", "hide-warnings"}, "Hide all the warnings collected during execution", &CompilerOptions::hideWarnings},
 };
 
 

@@ -43,7 +43,7 @@ void CommandLineParser::reportError(const std::string& message) const
 void CommandLineParser::printHelp() const
 {
     if (!applicationDescription.empty()) {
-        std::cout << applicationDescription << "\n\n";
+        std::cout << applicationDescription << "\n" << std::endl;
     }
 
     std::cout << "Usage:";
@@ -53,14 +53,14 @@ void CommandLineParser::printHelp() const
     if (!options.empty() || helpOptionAdded || versionOptionAdded) {
         std::cout << " [options]";
     }
-    std::cout << "\n\n";
+    std::cout << "\n" << std::endl;
 
     if (!positionalArgumentDefs.empty()) {
         std::cout << "Arguments:\n";
         for (const PositionalArgument& pos : positionalArgumentDefs) {
-            std::cout << "  " << pos.name << "\t" << pos.description << "\n";
+            std::cout << "  " << pos.name << "\t" << pos.description << std::endl;
         }
-        std::cout << "\n";
+        std::cout << std::endl;
     }
 
     std::cout << "Options:\n";
@@ -74,8 +74,9 @@ void CommandLineParser::printHelp() const
 
     for (const CommandLineOption& opt : options) {
         std::cout << "  ";
-        for (std::size_t i = 0; i < opt.names.size(); ++i) {
-            std::string prefix = (opt.names[i].size() == 1) ? "-" : "--";
+        for (std::size_t i = 0; i < opt.names.size(); ++i) 
+        {
+            std::string prefix = (opt.names[i].size() > short_flag_size) ? "--" : "-";
             std::cout << prefix << opt.names[i];
             if (i + 1 < opt.names.size()) {
                 std::cout << ", ";
@@ -84,11 +85,11 @@ void CommandLineParser::printHelp() const
         if (!opt.valueName.empty()) {
             std::cout << " <" << opt.valueName << ">";
         }
-        std::cout << "\t" << opt.description << "\n";
+        std::cout << "\t" << opt.description << std::endl;
     }
 }
 
-void CommandLineParser::process(int argc, char* argv[])
+int CommandLineParser::process(int argc, char* argv[])
 {
     std::vector<std::string> args(argv + 1, argv + argc);
 
@@ -104,31 +105,32 @@ void CommandLineParser::process(int argc, char* argv[])
         if (arg.rfind("--", 0) == 0) {
             name = arg.substr(2);
             isOption = true;
-        } else if (arg.rfind("-", 0) == 0 && arg.size() > 1) {
+        } 
+        else if (arg.rfind("-", 0) == 0 && arg.size() > 1) {
             name = arg.substr(1);
             isOption = true;
         }
 
-        if (!isOption) {
+        if(!isOption) {
             parsedPositionalArguments.push_back(arg);
             ++i;
             continue;
         }
 
-        if (helpOptionAdded && (name == "h" || name == "help")) {
+        if(helpOptionAdded && (name == "h" || name == "help")) {
             printHelp();
-            std::exit(0);
+            return 0;
         }
 
-        if (versionOptionAdded && (name == "v" || name == "version")) {
+        if(versionOptionAdded && (name == "v" || name == "version")) {
             std::cout << applicationVersion << std::endl;
-            std::exit(0);
+            return 0;
         }
 
         auto it = nameToOptionIndex.find(name);
         if (it == nameToOptionIndex.end()) {
             reportError("unknown option: " + arg);
-            std::exit(1);
+            return 1;
         }
 
         const CommandLineOption& opt = options[it->second];
@@ -148,8 +150,10 @@ void CommandLineParser::process(int argc, char* argv[])
     }
 
     // applicazione dei default per le opzioni con valore non impostate
-    for (const CommandLineOption& opt : options) {
+    for (const CommandLineOption& opt : options) 
+    {
         const std::string& canonicalName = opt.names.front();
+
         if (!opt.valueName.empty() && parsedValues.find(canonicalName) == parsedValues.end()
             && !opt.defaultValue.empty()) {
             parsedValues[canonicalName] = opt.defaultValue;

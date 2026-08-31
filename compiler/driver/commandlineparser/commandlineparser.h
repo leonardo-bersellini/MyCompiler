@@ -13,15 +13,13 @@ struct CommandLineOption
                        const std::string& description,
                        const std::string& valueName = "")
         : names{name}, description(description), valueName(valueName)
-    {
-    }
+    {}
 
     CommandLineOption(const std::vector<std::string>& names,
                        const std::string& description,
                        const std::string& valueName = "")
         : names(names), description(description), valueName(valueName)
-    {
-    }
+    {}
 	
     std::vector<std::string> names;
     std::string description;
@@ -44,7 +42,7 @@ public:
     void addPositionalArgument(const std::string& name, const std::string& description);
     void addOption(const CommandLineOption& option);
 
-    void process(int argc, char* argv[]);
+    int process(int argc, char* argv[]);
 
     bool isSet(const std::string& name) const;
     std::string value(const std::string& name) const;
@@ -55,6 +53,7 @@ private:
     std::string applicationVersion;
     bool versionOptionAdded = false;
     bool helpOptionAdded = false;
+    const int short_flag_size = 2; //sotto N caratteri i flag sono short
 
     std::vector<CommandLineOption> options;
     std::unordered_map<std::string, std::size_t> nameToOptionIndex; 

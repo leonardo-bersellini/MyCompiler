@@ -28,6 +28,8 @@ void ErrorLog::addWarning(const std::string& message)
     LogEntry w;
     w.type = LogType::Warning;
     w.message = message;
+
+    addEntry(w);
 } 
 
 /*

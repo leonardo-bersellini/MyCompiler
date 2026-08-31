@@ -27,6 +27,7 @@ struct CompilerOptions
     bool emitIR = false;
     bool verbose = false;
     bool noOutputFile = false;
+    bool hideWarnings = false;
 };
 
 #endif // OPTIONS_H
