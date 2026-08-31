@@ -89,7 +89,7 @@ void CommandLineParser::printHelp() const
     }
 }
 
-int CommandLineParser::process(int argc, char* argv[])
+void CommandLineParser::process(int argc, char* argv[])
 {
     std::vector<std::string> args(argv + 1, argv + argc);
 
@@ -119,18 +119,18 @@ int CommandLineParser::process(int argc, char* argv[])
 
         if(helpOptionAdded && (name == "h" || name == "help")) {
             printHelp();
-            return 0;
+            std::exit(0);
         }
 
         if(versionOptionAdded && (name == "v" || name == "version")) {
             std::cout << applicationVersion << std::endl;
-            return 0;
+            std::exit(0);
         }
 
         auto it = nameToOptionIndex.find(name);
         if (it == nameToOptionIndex.end()) {
             reportError("unknown option: " + arg);
-            return 1;
+            std::exit(1);
         }
 
         const CommandLineOption& opt = options[it->second];
@@ -159,6 +159,8 @@ int CommandLineParser::process(int argc, char* argv[])
             parsedValues[canonicalName] = opt.defaultValue;
         }
     }
+
+    return;
 }
 
 bool CommandLineParser::isSet(const std::string& name) const

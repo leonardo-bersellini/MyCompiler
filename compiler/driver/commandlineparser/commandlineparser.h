@@ -42,7 +42,7 @@ public:
     void addPositionalArgument(const std::string& name, const std::string& description);
     void addOption(const CommandLineOption& option);
 
-    int process(int argc, char* argv[]);
+    void process(int argc, char* argv[]);
 
     bool isSet(const std::string& name) const;
     std::string value(const std::string& name) const;
