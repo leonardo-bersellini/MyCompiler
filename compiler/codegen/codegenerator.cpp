@@ -257,16 +257,24 @@ bool CodeGenerator::isGlobalScope() const
  * Funzione di utility, permette di convertire i tipi dell'ast in tipi llvm.
  */
 
-llvm::Type* CodeGenerator::getLLVMType(const ValueType &type)
+llvm::Type* CodeGenerator::getLLVMType(const Type &type)
 {
-    switch(type) {
-        case ValueType::Int : return llvm::Type::getInt32Ty(Context);
+    switch(type.primitive) {
+        case PrimitiveType::Int : return llvm::Type::getInt32Ty(Context);
             break;
-        case ValueType::Double : return llvm::Type::getDoubleTy(Context);
+        case PrimitiveType::Double : return llvm::Type::getDoubleTy(Context);
             break;
-        case ValueType::Bool : return llvm::Type::getInt1Ty(Context);
+        case PrimitiveType::Bool : return llvm::Type::getInt1Ty(Context);
             break;
-        case ValueType::Char : return llvm::Type::getInt8Ty(Context);
+        case PrimitiveType::Char : return llvm::Type::getInt8Ty(Context);
+            break;
+        case PrimitiveType::ArrayInt: return llvm::ArrayType::get(getLLVMType(Type(PrimitiveType::Int)), type.size.value());
+            break;
+        case PrimitiveType::ArrayDouble: return llvm::ArrayType::get(getLLVMType(Type(PrimitiveType::Double)), type.size.value());
+            break;
+        case PrimitiveType::ArrayChar: return llvm::ArrayType::get(getLLVMType(Type(PrimitiveType::Char)), type.size.value());
+            break;
+        case PrimitiveType::ArrayBool: return llvm::ArrayType::get(getLLVMType(Type(PrimitiveType::Bool)), type.size.value());
             break;
         default : return nullptr;
             break;
@@ -278,25 +286,37 @@ llvm::Type* CodeGenerator::getLLVMType(const ValueType &type)
  * dell'enumerazione standard del nostro ast.
  */
 
-ValueType CodeGenerator::getValueType(llvm::Type *type)
+PrimitiveType CodeGenerator::getPrimitiveType(llvm::Type *type)
 {
     if (type->isIntegerTy(1))
-        return ValueType::Bool;
+        return PrimitiveType::Bool;
 
     if (type->isIntegerTy(8))
-        return ValueType::Char;
+        return PrimitiveType::Char;
 
     if (type->isIntegerTy(32))
-        return ValueType::Int;
+        return PrimitiveType::Int;
 
     if (type->isDoubleTy())
-        return ValueType::Double;
+        return PrimitiveType::Double;
 
     if (type->isVoidTy())
-        return ValueType::Void;
+        return PrimitiveType::Void;
 
-    // String e altri tipi saranno gestiti successivamente
-    return ValueType::Error;
+    if(type->isArrayTy()) {
+        PrimitiveType elementTy = getPrimitiveType(type->getArrayElementType());
+
+        //dall'elemento singolo si deduce il tipo dell'array
+        switch (elementTy) {
+            case PrimitiveType::Int:    return PrimitiveType::ArrayInt;
+            case PrimitiveType::Double: return PrimitiveType::ArrayDouble;
+            case PrimitiveType::Char:   return PrimitiveType::ArrayChar;
+            case PrimitiveType::Bool:   return PrimitiveType::ArrayBool;
+            default: return PrimitiveType::Error;
+        }
+    }
+
+    return PrimitiveType::Error;
 }
 
 /*
@@ -308,23 +328,23 @@ ValueType CodeGenerator::getValueType(llvm::Type *type)
  * questa funzione non legge le regole, ma le applica soltanto.
  */
 
-llvm::Value* CodeGenerator::castValue(llvm::Value *value, ValueType from, ValueType to)
+llvm::Value* CodeGenerator::castValue(llvm::Value *value, PrimitiveType from, PrimitiveType to)
 {
     if (from == to) return value;
 
     switch (from)
     {
-    case ValueType::Int:
+    case PrimitiveType::Int:
 
-        if (to == ValueType::Double)
-            return Builder.CreateSIToFP(value, getLLVMType(ValueType::Double), "sitofp");
+        if (to == PrimitiveType::Double)
+            return Builder.CreateSIToFP(value, getLLVMType(Type(PrimitiveType::Double)), "sitofp");
 
         break;
 
-    case ValueType::Double:
+    case PrimitiveType::Double:
         //non ancora utilizzato in types.h, non valido
-        if (to == ValueType::Int)
-            return Builder.CreateFPToSI(value, getLLVMType(ValueType::Int), "fptosi");
+        if (to == PrimitiveType::Int)
+            return Builder.CreateFPToSI(value, getLLVMType(Type(PrimitiveType::Int)), "fptosi");
 
         break;
 
@@ -334,6 +354,41 @@ llvm::Value* CodeGenerator::castValue(llvm::Value *value, ValueType from, ValueT
 
     // Cast non supportato
     return value;
+}
+
+/*
+ * Funzione di utility per array, permette di racchiudere la logica di copia degli elementi da 
+ * un array ad un altro.
+ */
+
+void CodeGenerator::copyArrayElements(llvm::Value* source, llvm::Value* destination, llvm::ArrayType* arrType, llvm::Type* elementType)
+{
+    for(unsigned i = 0; i < arrType->getNumElements(); ++i) {
+        std::vector<llvm::Value*> idx = {
+            llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), 0),
+            llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), i)
+        };
+
+        llvm::Value* srcPtr = Builder.CreateGEP(arrType, source, idx, "src.elem");
+        llvm::Value* destPtr = Builder.CreateGEP(arrType, destination, idx, "dest.elem");
+
+        llvm::Value* elementVal = Builder.CreateLoad(elementType, srcPtr);
+        Builder.CreateStore(elementVal, destPtr);
+    }
+}
+
+/*
+ * Funzione di utility, racchiude la logica di assegnazione di un array, riutilizza
+ * internamente la copia degli elementi.
+ */
+
+void CodeGenerator::generateArrayAssignment(const LiteralArrayExpr* arrLit, llvm::Value* destination)
+{
+    auto srcVal = generateExpr(arrLit); // puntatore all'array temporaneo del literal
+    llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(getLLVMType(Type(arrLit->type, arrLit->elements.size())));
+    llvm::Type* elementType = arrType->getElementType();
+
+    copyArrayElements(srcVal.llvm_value, destination, arrType, elementType);
 }
 
 /// --- ENTRY POINT, CODEGEN --- ///
@@ -453,13 +508,29 @@ void CodeGenerator::generateScopeStmt(const BlockStmt *st)
 void CodeGenerator::generateAssignStmt(const AssignmentStmt *st)
 {
     auto symbol = lookupSymbol(st->name);
+    PrimitiveType symbolType = getPrimitiveType(symbol->getAllocatedType());
 
-    auto value = generateExpr(st->value.get());
+    if(types::isArray(symbolType)) 
+    {
+        if(auto arrLit = dynamic_cast<const LiteralArrayExpr*>(st->value.get())) {
+            generateArrayAssignment(arrLit, symbol);
+        } else {
+            // assegnazione di un array ad un altro: arr1 = arr2;
+            auto varExpr = dynamic_cast<const VariableExpr*>(st->value.get());
+            llvm::Value* source = lookupSymbol(varExpr->name);
 
-    // conversione dal tipo del valore al tipo della variabile
-    auto casted = castValue(value.llvm_value, value.type, getValueType(symbol->getAllocatedType()));
+            llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(symbol->getAllocatedType());
+            llvm::Type* elementType = arrType->getElementType();
 
-    Builder.CreateStore(casted, symbol);
+            copyArrayElements(source, symbol, arrType, elementType);
+        }
+    } else {
+        auto value = generateExpr(st->value.get());
+        // conversione dal tipo del valore al tipo della variabile
+        auto casted = castValue(value.llvm_value, value.type, getPrimitiveType(symbol->getAllocatedType()));
+
+        Builder.CreateStore(casted, symbol);
+    }
 }
 
 void CodeGenerator::generateDeclarationStmt(const DeclarationStmt *st)
@@ -473,11 +544,16 @@ void CodeGenerator::generateDeclarationStmt(const DeclarationStmt *st)
     auto* alloc = Builder.CreateAlloca(getLLVMType(st->type), nullptr, st->name);
     declareSymbol(st->name, alloc);
 
-    if(st->initializer) {
-        // store del valore in inizializzazione
-        auto val = generateExpr(st->initializer.get());
-        auto casted = castValue(val.llvm_value, val.type, st->type);
-        Builder.CreateStore(casted, alloc);
+    if(st->initializer) 
+    {
+        if(auto arrLiteral = dynamic_cast<const LiteralArrayExpr*>(st->initializer.get())) {
+            generateArrayAssignment(arrLiteral, alloc);
+        } else {
+            // store del valore in inizializzazione
+            auto val = generateExpr(st->initializer.get());
+            auto casted = castValue(val.llvm_value, val.type, st->type.primitive);
+            Builder.CreateStore(casted, alloc);
+        }
     }
 }
 
@@ -519,7 +595,7 @@ void CodeGenerator::generateFunctionStmt(const FunctionStmt *st)
 
     //le funzioni void possono terminare senza return esplicito
     if(!Builder.GetInsertBlock()->getTerminator()) {
-        if(st->returnType == ValueType::Void)
+        if(st->returnType.primitive == PrimitiveType::Void)
             Builder.CreateRetVoid();
     }
 
@@ -780,13 +856,13 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
     {
         if(s->isInteger)
             return ExprGenResult {
-                llvm::ConstantInt::get(getLLVMType(ValueType::Int), (int)s->value),
-                ValueType::Int
+                llvm::ConstantInt::get(getLLVMType(Type(PrimitiveType::Int)), (int)s->value),
+                PrimitiveType::Int
             };
         else
             return ExprGenResult {
-                llvm::ConstantFP::get(getLLVMType(ValueType::Double), s->value),
-                ValueType::Double
+                llvm::ConstantFP::get(getLLVMType(Type(PrimitiveType::Double)), s->value),
+                PrimitiveType::Double
             };
     }
 
@@ -800,8 +876,8 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
     else if(auto s = dynamic_cast<const CharExpr*>(expr))
     {
         return ExprGenResult {
-            llvm::ConstantInt::get(getLLVMType(ValueType::Char), s->value),
-            ValueType::Char
+            llvm::ConstantInt::get(getLLVMType(Type(PrimitiveType::Char)), s->value),
+            PrimitiveType::Char
         };
     }
 
@@ -810,20 +886,51 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
     {
         return ExprGenResult {
             llvm::ConstantInt::get(llvm::Type::getInt1Ty(Context), s->value),
-            ValueType::Bool
+            PrimitiveType::Bool
         };
     }
 
     // Variable Expression
     else if(auto s = dynamic_cast<const VariableExpr*>(expr))
     {
-        
         llvm::AllocaInst *val = lookupSymbol(s->name);
+        PrimitiveType type = getPrimitiveType(val->getAllocatedType());
+
+        if(types::isArray(type)) {
+            // non si può eseguire un load singolo su un array
+            return ExprGenResult{val, type};
+        }
 
         return ExprGenResult {
-            Builder.CreateLoad(val->getAllocatedType(), val, s->name),
-            getValueType(val->getAllocatedType()),
+            Builder.CreateLoad(val->getAllocatedType(), val, s->name), 
+            type,
         };
+    }
+
+    // Array Literal Expression
+    else if(auto s = dynamic_cast<const LiteralArrayExpr*>(expr))
+    {
+        llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(getLLVMType(Type(s->type, s->elements.size())));
+        llvm::AllocaInst* array = Builder.CreateAlloca(arrType);
+
+        int index = 0;
+        for(const auto& e : s->elements) 
+        {
+            llvm::Value* elementValue = generateExpr(e.get()).llvm_value;
+            
+            //utilizzato per calcolare la posizione dell'elemento nell'array
+            std::vector<llvm::Value*> indices = {
+                llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), 0),
+                llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), index)
+            };
+
+            llvm::Value* elementPtr = Builder.CreateGEP(arrType, array, indices, "arr.elem");
+            Builder.CreateStore(elementValue, elementPtr);
+
+            index++;
+        }
+
+        return ExprGenResult{array, s->type};
     }
 
     // Function Call Expression
@@ -839,7 +946,7 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
 
         return ExprGenResult {
             Builder.CreateCall(callee, args, s->name),
-            getValueType(callee->getReturnType())
+            getPrimitiveType(callee->getReturnType())
         };
     }
 
@@ -865,8 +972,8 @@ ExprGenResult CodeGenerator::generateBinaryExpr(const BinaryExpr *s)
 
     //TODO -> add NOT logico
 
-    ValueType resultType = Type::binaryResultType(s->op, left.type, right.type);
-    ValueType promoteType = Type::promotionType(left.type, right.type);
+    PrimitiveType resultType = types::binaryResultType(s->op, left.type, right.type);
+    PrimitiveType promoteType = types::promotionType(left.type, right.type);
 
     // conversione implicita
     llvm::Value *L = castValue(left.llvm_value, left.type, promoteType);
@@ -875,7 +982,7 @@ ExprGenResult CodeGenerator::generateBinaryExpr(const BinaryExpr *s)
     auto createArithmeticOp = [&](auto intOp, auto floatOp) -> ExprGenResult {
         llvm::Value *value;
 
-        if(promoteType == ValueType::Double) {
+        if(promoteType == PrimitiveType::Double) {
             value = floatOp();
         } else {
             value = intOp();
@@ -962,16 +1069,16 @@ ExprGenResult CodeGenerator::generateUnaryExpr(const UnaryExpr *expr)
 
     auto createUnaryOp = [&](auto intOp, auto floatOp) -> ExprGenResult {
         llvm::Value* value;
-        ValueType resultType;
+        PrimitiveType resultType;
 
-        if(operand.type == ValueType::Double)
+        if(operand.type == PrimitiveType::Double)
         {
             value = floatOp();
-            resultType = ValueType::Double;
+            resultType = PrimitiveType::Double;
         } else {
 
             value = intOp();
-            resultType = ValueType::Int;
+            resultType = PrimitiveType::Int;
         }
 
         return ExprGenResult { value, resultType };

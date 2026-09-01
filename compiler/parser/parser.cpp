@@ -112,9 +112,16 @@ std::unique_ptr<Stmt> Parser::parseStatement()
     }
     else if(check(TokenType::TypeKeyword))
     {
-        //Dichiarazione o Funzione
+        //Dichiarazione (anche Array) o Funzione
 
-        if(peek(2).type == TokenType::LParen)
+        int peek_size = 2;
+
+        if(peek(1).type == TokenType::LBracket) {
+            //si aggiungono un numberIdentifier + RBracket, e il function-identifier
+            peek_size += 3;
+        }
+
+        if(peek(peek_size).type == TokenType::LParen)
             return parseFunctionStmt();
         else
             return parseDeclarationStmt();
@@ -252,6 +259,44 @@ std::unique_ptr<Stmt> Parser::parseBranchBody()
 }
 
 /*
+ *  Questa espressione deduce e ricostruisce il tipo di un array,
+ *  analizzando i token correnti e segnalando eventuali errori.
+ */
+
+Type Parser::parseArrayType()
+{
+    auto type = Type(types::toPrimitiveType(advance().lexeme, true)); //type keyword
+
+    expect(TokenType::LBracket, true);
+
+    auto size_expr = parseExpr();
+
+    expect(TokenType::RBracket, true);
+
+    if(auto d = dynamic_cast<const NumberExpr*>(size_expr.get())) 
+    {
+        if(!d->isInteger) {
+            errorLog->addError("size identifier in array must be integer", tokens.at(currentPos).position);
+            recoveryHandler.synchronize({TokenType::Semicolon});
+            return Type(PrimitiveType::Error);
+        }
+
+        Type arraytype;
+        arraytype.primitive = type.primitive;
+        arraytype.size = d->value;
+        
+        return arraytype;
+        
+    } else {
+        errorLog->addError("expected a numeric expression as array size identifier", tokens.at(currentPos).position);
+        recoveryHandler.synchronize({TokenType::Semicolon});
+        return Type(PrimitiveType::Error);
+    }
+
+    return Type(PrimitiveType::Error); //never reached
+}
+
+/*
  * Funzione di parsing degli stmt di assegnazione.
  * Caso diverso dall'assegnazione gestita in inizializzazione.
  */
@@ -283,11 +328,19 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt(bool isConstDeclaration)
         advance(); //consuma 'const'
     }
 
-    if(peek(2).type == TokenType::Equal)
+    //costruzione del tipo
+    Type type;
+
+    if(peek(1).type == TokenType::LBracket) {
+        type = parseArrayType(); 
+    } else {
+        type.primitive = types::toPrimitiveType(advance().lexeme);
+    }
+
+    if(peek(1).type == TokenType::Equal)
     {
         // --- Dichiarazione con inizializzazione --- //
 
-        std::string type = advance().lexeme;        // consuma TypeKeyword
         std::string name = peek().lexeme;           // legge il nome presumendo che sia un identifier
         bool isValid = expect(TokenType::Identifier); // verifica identifier e lo consuma
 
@@ -302,7 +355,7 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt(bool isConstDeclaration)
         expect(TokenType::Semicolon);
 
         auto d = std::make_unique<DeclarationStmt>();
-        d->type = Type::toValueType(type); //std::string -> ValueType
+        d->type = type;
         d->isConst = isConstDeclaration;
         d->name = name;
         d->initializer = std::move(initExpr);
@@ -311,7 +364,6 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt(bool isConstDeclaration)
     else
     {
         // --- Dichiarazione pura --- //
-        std::string type = advance().lexeme;  //consuma TypeKeyword
 
         std::string name = peek().lexeme;     // legge Identifier
         bool isValid = expect(TokenType::Identifier);
@@ -324,7 +376,7 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt(bool isConstDeclaration)
         expect(TokenType::Semicolon, true);
 
         auto d = std::make_unique<DeclarationStmt>();
-        d->type = Type::toValueType(type); //std::string -> ValueType
+        d->type = type;
         d->isConst = isConstDeclaration;
         d->name = name;
         d->initializer = nullptr; //nessun initializer
@@ -340,11 +392,19 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt(bool isConstDeclaration)
 
 std::unique_ptr<Stmt> Parser::parseFunctionStmt()
 {
-    ValueType returnType = Type::toValueType(advance().lexeme); // consuma tipo di ritorno
+    //costruzione del tipo di ritorno
+    Type returnType;
+
+    if(peek(1).type == TokenType::LBracket) {
+        returnType = parseArrayType();
+    } else {
+        returnType.primitive = types::toPrimitiveType(advance().lexeme);
+    }
+
     std::string identifier = peek().lexeme; // consuma nome funzione
     bool valid = expect(TokenType::Identifier);
 
-    if(returnType == ValueType::Error) errorLog->addError("error: returning <errortype> in function: " + identifier);
+    if(returnType.primitive == PrimitiveType::Error) errorLog->addError("error: returning <errortype> in function: " + identifier);
     if(!valid) {
         recoveryHandler.synchronize({TokenType::TypeKeyword});
         return std::make_unique<ErrorStmt>();
@@ -363,7 +423,7 @@ std::unique_ptr<Stmt> Parser::parseFunctionStmt()
             isConst = true;
         }
 
-        ValueType paramType = Type::toValueType(advance().lexeme); // consuma tipo parametro
+        Type paramType = Type(types::toPrimitiveType(advance().lexeme)); // consuma tipo parametro
         std::string paramName = advance().lexeme;                 // consuma nome parametro
 
         params.push_back(FunctionParam(paramType, paramName, isConst));
@@ -871,6 +931,23 @@ std::unique_ptr<Expr> Parser::parseFactor()
         return boolExpr;
     }
 
+    // Array Literal
+    else if(check(TokenType::LBracket))
+    {
+        advance(); //consuma [
+
+        auto arr = std::make_unique<LiteralArrayExpr>();
+
+        while(!check(TokenType::RBracket) && !isAtEnd()) 
+        {
+            arr->elements.push_back(parseExpr());
+            if(check(TokenType::Comma)) advance();
+        }
+        expect(TokenType::RBracket, true);
+
+        return arr;
+    } 
+
     // Chiamata a funzione
     else if(check(TokenType::Identifier) && peek(1).type == TokenType::LParen)
     {
@@ -894,7 +971,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
         return call;
     }
 
-    // Varibile
+    // Variabile 
     else if(check(TokenType::Identifier))
     {
         auto name = advance().lexeme;

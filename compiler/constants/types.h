@@ -2,6 +2,8 @@
 #define TYPES_H
 
 #include <string>
+#include <optional>
+#include <stdexcept>
 #include "token.h"
 
 /**
@@ -12,33 +14,51 @@
  *  semantico e code generator.
  */
 
-enum class ValueType {
-    Int,
-    Double,
+enum class PrimitiveType {
+    Int,    ArrayInt,
+    Double, ArrayDouble,
+    Char,   ArrayChar,
+    Bool,   ArrayBool,
     String,
-    Char,
-    Bool,
     Void,
     Error
 };
 
-namespace Type
+
+struct Type {
+public:
+    Type() = default;
+    explicit Type(const PrimitiveType t) : primitive(t), size(std::nullopt) {}
+    explicit Type(const PrimitiveType t, const std::size_t s) : primitive(t), size(s) {}
+    
+    PrimitiveType primitive;
+    std::optional<std::size_t> size = std::nullopt; //per array
+
+    bool operator==(const Type& other) const {
+        if(primitive != other.primitive) return false;
+        return size == other.size; // std::optional supporta == di default
+    }
+};
+
+
+namespace types
 {
-    inline bool isNumeric(ValueType t);
-    inline bool isTextual(ValueType t);
-    inline bool isAssignmentCompatible(ValueType destination, ValueType source);
-    inline bool isEqualityComparable(ValueType left, ValueType right);
-    inline bool isRelationalComparable(ValueType left, ValueType right);
-    inline ValueType arithmeticResultType(ValueType left, ValueType right);
-    inline ValueType additionResultType(ValueType left, ValueType right);
-    inline ValueType equalityResultType(ValueType left, ValueType right);
-    inline ValueType relationalResultType(ValueType left, ValueType right);
-    inline ValueType logicalResultType(ValueType left, ValueType right);
-    inline ValueType binaryResultType(TokenType _operator, ValueType left, ValueType right);
-    inline ValueType unaryResultType(TokenType _operator, ValueType left);
-    inline ValueType promotionType(ValueType first, ValueType second);
-    inline std::string toString(const ValueType& type);
-    inline ValueType toValueType(const std::string& typeName);
+    inline bool isNumeric(PrimitiveType t);
+    inline bool isTextual(PrimitiveType t);
+    inline bool isArray(PrimitiveType t);
+    inline bool isAssignmentCompatible(Type destination, Type source);
+    inline bool isEqualityComparable(PrimitiveType left, PrimitiveType right);
+    inline bool isRelationalComparable(PrimitiveType left, PrimitiveType right);
+    inline PrimitiveType arithmeticResultType(PrimitiveType left, PrimitiveType right);
+    inline PrimitiveType additionResultType(PrimitiveType left, PrimitiveType right);
+    inline PrimitiveType equalityResultType(PrimitiveType left, PrimitiveType right);
+    inline PrimitiveType relationalResultType(PrimitiveType left, PrimitiveType right);
+    inline PrimitiveType logicalResultType(PrimitiveType left, PrimitiveType right);
+    inline PrimitiveType binaryResultType(TokenType _operator, PrimitiveType left, PrimitiveType right);
+    inline PrimitiveType unaryResultType(TokenType _operator, PrimitiveType left);
+    inline PrimitiveType promotionType(PrimitiveType first, PrimitiveType second);
+    inline std::string toString(const Type& type);
+    inline PrimitiveType toPrimitiveType(const std::string& typeName, bool isArray = false);
 
     // TODO aggiungere commenti alla sezione Type
 }
@@ -47,16 +67,25 @@ namespace Type
  * Ritorna true se il valore è considerato numerico
  */
 
-inline bool Type::isNumeric(ValueType t) {
-    return t == ValueType::Int || t == ValueType::Double;
+inline bool types::isNumeric(PrimitiveType t) {
+    return t == PrimitiveType::Int || t == PrimitiveType::Double;
 }
 
 /*
  * Ritorna true se il valore è considerato testuale
  */
 
-inline bool Type::isTextual(ValueType t) {
-    return t == ValueType::Char || t == ValueType::String;
+inline bool types::isTextual(PrimitiveType t) {
+    return t == PrimitiveType::Char || t == PrimitiveType::String;
+}
+
+/*
+ *  Ritorna true se il tipo è riconducibile ad un array
+ */
+
+inline bool types::isArray(PrimitiveType t) {
+    return (t == PrimitiveType::ArrayInt || t == PrimitiveType::ArrayDouble ||
+            t == PrimitiveType::ArrayChar || t == PrimitiveType::ArrayBool);
 }
 
 /*
@@ -67,14 +96,15 @@ inline bool Type::isTextual(ValueType t) {
  * es: int x = 5.0; (variableType è int mentre assignType è double).
  */
 
-inline bool Type::isAssignmentCompatible(ValueType destination, ValueType source) {
-    if (destination == ValueType::Error) return true;  // errore già segnalato altrove, non duplicare
-    if (source == ValueType::Error) return true;
+inline bool types::isAssignmentCompatible(Type destination, Type source) 
+{
+    if (destination.primitive == PrimitiveType::Error) return true;  // errore già segnalato altrove, non duplicare
+    if (source.primitive == PrimitiveType::Error) return true;
 
     if (destination == source) return true;
 
     // promozione Int -> Double
-    if (destination == ValueType::Double && source == ValueType::Int) return true;
+    if (destination.primitive == PrimitiveType::Double && source.primitive == PrimitiveType::Int) return true;
 
     return false;
 }
@@ -84,7 +114,7 @@ inline bool Type::isAssignmentCompatible(ValueType destination, ValueType source
  * tra loro.
   */
 
-inline bool Type::isEqualityComparable(ValueType left, ValueType right)
+inline bool types::isEqualityComparable(PrimitiveType left, PrimitiveType right)
 {
     if(left == right)
         return true;
@@ -95,7 +125,7 @@ inline bool Type::isEqualityComparable(ValueType left, ValueType right)
     return false;
 }
 
-inline bool Type::isRelationalComparable(ValueType left, ValueType right)
+inline bool types::isRelationalComparable(PrimitiveType left, PrimitiveType right)
 {
     if(left == right)
         return true;
@@ -106,24 +136,24 @@ inline bool Type::isRelationalComparable(ValueType left, ValueType right)
     return false;
 }
 
-inline ValueType Type::arithmeticResultType(ValueType left, ValueType right)
+inline PrimitiveType types::arithmeticResultType(PrimitiveType left, PrimitiveType right)
 {
     if (!isNumeric(left) || !isNumeric(right))
-        return ValueType::Error;
+        return PrimitiveType::Error;
 
-    return (left == ValueType::Double || right == ValueType::Double)
-               ? ValueType::Double
-               : ValueType::Int;
+    return (left == PrimitiveType::Double || right == PrimitiveType::Double)
+               ? PrimitiveType::Double
+               : PrimitiveType::Int;
 }
 
-inline ValueType Type::additionResultType(ValueType left, ValueType right)
+inline PrimitiveType types::additionResultType(PrimitiveType left, PrimitiveType right)
 {
     // caso numerico
     if (isNumeric(left) && isNumeric(right))
     {
-        return (left == ValueType::Double || right == ValueType::Double)
-                   ? ValueType::Double
-                   : ValueType::Int;
+        return (left == PrimitiveType::Double || right == PrimitiveType::Double)
+                   ? PrimitiveType::Double
+                   : PrimitiveType::Int;
     }
 
     // Caso testuale
@@ -133,42 +163,42 @@ inline ValueType Type::additionResultType(ValueType left, ValueType right)
     if(leftTextual || rightTextual)
     {
         // 'a' + 'b' = "ab";
-        if(left == ValueType::Char && right == ValueType::Char)
-            return ValueType::String;
+        if(left == PrimitiveType::Char && right == PrimitiveType::Char)
+            return PrimitiveType::String;
 
         // Almeno uno dei due è una stringa -> concatenazione
-        if((left == ValueType::String && rightTextual) || (right == ValueType::String && leftTextual))
-            return ValueType::String;
+        if((left == PrimitiveType::String && rightTextual) || (right == PrimitiveType::String && leftTextual))
+            return PrimitiveType::String;
     }
 
-    return ValueType::Error;
+    return PrimitiveType::Error;
 }
 
-inline ValueType Type::equalityResultType(ValueType left, ValueType right)
+inline PrimitiveType types::equalityResultType(PrimitiveType left, PrimitiveType right)
 {
     return isEqualityComparable(left, right)
-        ? ValueType::Bool
-        : ValueType::Error;
+        ? PrimitiveType::Bool
+        : PrimitiveType::Error;
 }
 
-inline ValueType Type::relationalResultType(ValueType left, ValueType right)
+inline PrimitiveType types::relationalResultType(PrimitiveType left, PrimitiveType right)
 {
     return isRelationalComparable(left, right)
-        ? ValueType::Bool
-        : ValueType::Error;
+        ? PrimitiveType::Bool
+        : PrimitiveType::Error;
 }
 
-inline ValueType Type::logicalResultType(ValueType left, ValueType right)
+inline PrimitiveType types::logicalResultType(PrimitiveType left, PrimitiveType right)
 {
-    return (left == ValueType::Bool && right == ValueType::Bool)
-           ? ValueType::Bool
-           : ValueType::Error;
+    return (left == PrimitiveType::Bool && right == PrimitiveType::Bool)
+           ? PrimitiveType::Bool
+           : PrimitiveType::Error;
 }
 
-inline ValueType Type::binaryResultType(TokenType _operator, ValueType left, ValueType right)
+inline PrimitiveType types::binaryResultType(TokenType _operator, PrimitiveType left, PrimitiveType right)
 {
-    if (left == ValueType::Error || right == ValueType::Error)
-        return ValueType::Error;
+    if (left == PrimitiveType::Error || right == PrimitiveType::Error)
+        return PrimitiveType::Error;
 
     /* Controllo dei tipi di ritorno */
 
@@ -178,7 +208,7 @@ inline ValueType Type::binaryResultType(TokenType _operator, ValueType left, Val
         case TokenType::EqualEqual:
         case TokenType::NotEqual  :
 
-        return equalityResultType(left, right);
+            return equalityResultType(left, right);
 
         // Confronti Relazionali : operatori [ >, <, >=, <= ]
         case TokenType::Less :
@@ -206,25 +236,25 @@ inline ValueType Type::binaryResultType(TokenType _operator, ValueType left, Val
 
             return arithmeticResultType(left, right);
 
-        default: return ValueType::Error;
+        default: return PrimitiveType::Error;
             break;
     }
 
-    return ValueType::Error;
+    return PrimitiveType::Error;
 }
 
-inline ValueType Type::unaryResultType(TokenType _operator, ValueType left)
+inline PrimitiveType types::unaryResultType(TokenType _operator, PrimitiveType left)
 {
-    if(left == ValueType::Error)
-        return ValueType::Error;
+    if(left == PrimitiveType::Error)
+        return PrimitiveType::Error;
 
     switch(_operator) {
         // Operatori logici : operatori [!]
         case TokenType::LogicalNot:
-            if (left == ValueType::Bool) {
-                return ValueType::Bool;
+            if (left == PrimitiveType::Bool) {
+                return PrimitiveType::Bool;
             }
-            return ValueType::Error;
+            return PrimitiveType::Error;
 
         // Operatori aritmetici : operatori [+, -]
         case TokenType::Minus:
@@ -232,56 +262,84 @@ inline ValueType Type::unaryResultType(TokenType _operator, ValueType left)
             if (isNumeric(left)) {
                 return left; // Il tipo rimane lo stesso (Int resta Int, Double resta Double)
             }
-            return ValueType::Error;
+            return PrimitiveType::Error;
 
         default:
-            return ValueType::Error;
+            return PrimitiveType::Error;
     }
 }
 
-inline ValueType Type::promotionType(ValueType first, ValueType second)
+inline PrimitiveType types::promotionType(PrimitiveType first, PrimitiveType second)
 {
-    if (first == ValueType::Error || second == ValueType::Error)
-        return ValueType::Error;
+    if (first == PrimitiveType::Error || second == PrimitiveType::Error)
+        return PrimitiveType::Error;
 
     if (first == second)
         return first;
 
     // int + double = double
     if (isNumeric(first) && isNumeric(second))
-        return ValueType::Double;
+        return PrimitiveType::Double;
 
-    return ValueType::Error;
+    return PrimitiveType::Error;
 }
 
-inline std::string Type::toString(const ValueType& type) {
-    switch(type) {
-    case ValueType::Int: return "Int";
+/*
+ * Converte un valore di PrimitiveType in stringa letterale.
+ * Le stringhe ritornate da questa funzione devono essere complementari a quelle 
+ * controllare nella funzione inversa (toPrimitiveType). In caso contrario, una conversione
+ * prima a stringa e poi di nuovo a primitive risulterebbe in un errore.
+ */
+
+inline std::string types::toString(const Type& type) {
+    switch(type.primitive) {
+    case PrimitiveType::Int: return "int";
         break;
-    case ValueType::Double: return "Double";
+    case PrimitiveType::Double: return "double";
         break;
-    case ValueType::String: return "String";
+    case PrimitiveType::String: return "string";
         break;
-    case ValueType::Char: return "Char";
+    case PrimitiveType::Char: return "char";
         break;
-    case ValueType::Bool: return "Bool";
+    case PrimitiveType::Bool: return "bool";
         break;
-    case ValueType::Error: return "Error";
+    case PrimitiveType::Error: return "Error";
         break;
-    case ValueType::Void: return "Void";
+    case PrimitiveType::Void: return "void";
         break;
     }
+
+    if(isArray(type.primitive)) 
+    {
+        std::string base_type;
+        switch (type.primitive) {
+            case PrimitiveType::ArrayInt:    base_type = "int";
+                break;
+            case PrimitiveType::ArrayDouble: base_type = "double";
+                break;
+            case PrimitiveType::ArrayChar:   base_type = "char";
+                break;
+            case PrimitiveType::ArrayBool:   base_type = "bool";
+                break;
+        
+            default: throw std::runtime_error("internal error in types::tostring. control isArray failed");
+        }
+
+        std::string t = base_type + "[" + std::to_string(type.size.value()) + "]";
+        return t;
+    }
+
     return "Unknown";
 }
 
-inline ValueType Type::toValueType(const std::string& typeName) {
-    if (typeName == "int") return ValueType::Int;
-    if (typeName == "double") return ValueType::Double;
-    if (typeName == "string") return ValueType::String;
-    if (typeName == "char") return ValueType::Char;
-    if (typeName == "bool") return ValueType::Bool;
-    if( typeName == "void") return ValueType::Void;
-    return ValueType::Error;
+inline PrimitiveType types::toPrimitiveType(const std::string& typeName, bool isArray) {
+    if (typeName == "int")    return isArray ? PrimitiveType::ArrayInt : PrimitiveType::Int;
+    if (typeName == "double") return isArray ? PrimitiveType::ArrayDouble : PrimitiveType::Double;
+    if (typeName == "string") return PrimitiveType::String;
+    if (typeName == "char")   return isArray ?  PrimitiveType::ArrayChar : PrimitiveType::Char;
+    if (typeName == "bool")   return isArray ?  PrimitiveType::ArrayBool : PrimitiveType::Bool;
+    if( typeName == "void")   return PrimitiveType::Void;
+    return PrimitiveType::Error;
 }
 
 #endif // TYPES_H

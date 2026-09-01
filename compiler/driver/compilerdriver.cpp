@@ -296,8 +296,6 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
     ErrorLog errorLog;
     CodeGenerator codegen;
 
-    errorLog.addWarning("test warning");
-
     // Lettura e parsing del codice, indipendente dai flags
     const std::vector<Token> tokens = lexer.analiseString(source, errorLog);
 
@@ -331,6 +329,7 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
 
     // esecuzione finale, si raggiunge solo con i warning
     reportCompilationOutcome(errorLog, options);
+
 
     // Generazione degli stmt di codice llvm ir
     codegen.generate(*program.get());

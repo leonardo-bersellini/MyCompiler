@@ -15,6 +15,11 @@ enum class TokenType {
     CharLiteral,
     BoolLiteral,
 
+    ArrayIntegerLiteral,
+    ArrayDoubleLiteral,
+    ArrayCharLiteral,
+    ArrayBoolLiteral,
+
     Identifier,
 
     TypeKeyword,

@@ -15,8 +15,9 @@
 
 struct SymbolInfo {
 public:
-    explicit SymbolInfo(const ValueType& t, const bool& c) : type(t), isConst(c) {}
-    ValueType type;
+    explicit SymbolInfo(const Type& t, const bool& c) : type(t), isConst(c) {}
+    
+    Type type;
     bool isConst;
 };
 
@@ -26,8 +27,8 @@ public:
  */
 
 struct FunctionInfo {
-    ValueType returnType;
-    std::vector<ValueType> paramTypes;
+    Type returnType;
+    std::vector<Type> paramTypes;
 };
 
 #endif // SYMBOLS_H

@@ -36,6 +36,7 @@ private:
     std::unique_ptr<Stmt> parseStatement();
 
     std::unique_ptr<Stmt> parseBranchBody();
+    Type parseArrayType(); 
 
     std::unique_ptr<Stmt> parseScopeStmt();
     std::unique_ptr<Stmt> parseAssignStmt();

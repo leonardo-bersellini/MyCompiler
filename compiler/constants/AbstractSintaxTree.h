@@ -65,6 +65,13 @@ public:
     std::vector<std::unique_ptr<Expr>> args;
 };
 
+//array letterale := [value, value, value]
+class LiteralArrayExpr : public Expr {
+public:
+    mutable PrimitiveType type;
+    std::vector<std::unique_ptr<Expr>> elements;
+};
+
 class ErrorExpr : public Expr {
 public:
     //void, expression placeholder
@@ -90,7 +97,7 @@ public:
 
 class DeclarationStmt : public Stmt {
 public:
-    ValueType type;
+    Type type;
     bool isConst = false;
     std::string name;
     std::unique_ptr<Expr> initializer; //contiene le informazioni di un'eventuale inizializzazione
@@ -161,10 +168,10 @@ public:
 
 struct FunctionParam {
 public:
-    explicit FunctionParam(const ValueType& t, const std::string& s, const bool& c)
+    explicit FunctionParam(const Type& t, const std::string& s, const bool& c)
             : type(t), name(s), isConst(c) {}
             
-    ValueType type;
+    Type type;
     std::string name;
     bool isConst = false;
 };
@@ -172,7 +179,7 @@ public:
 class FunctionStmt : public Stmt {
 public:
     std::string name;
-    ValueType returnType;
+    Type returnType;
     std::vector<FunctionParam> params;
     std::unique_ptr<Stmt> body; // BlockStmt
 };

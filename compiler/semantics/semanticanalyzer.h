@@ -10,8 +10,9 @@
 
 // struttura di ritorno dell'analisi delle espressioni, racchiude i dati di analisi
 struct ExprAnalysisResult {
-    ValueType value_type;
-    // futuro: bool isConstant; std::optional<double> constantValue; ecc.
+    ExprAnalysisResult() = default;
+    ExprAnalysisResult(const Type& t) : type(t) {}
+    Type type;
 };
 
 class SemanticAnalyzer
@@ -43,7 +44,7 @@ private:
     void analyzeWhile(const WhileStmt* s);
     void analyzeSwitch(const SwitchStmt* s);
 
-    void analyzeCase(const CaseStmt* s, const ValueType& switch_type);
+    void analyzeCase(const CaseStmt* s, const PrimitiveType& switch_type);
     void analyzeDefault(const DefaultStmt* s);
 
     ExprAnalysisResult analyzeExpr(const Expr* expr);

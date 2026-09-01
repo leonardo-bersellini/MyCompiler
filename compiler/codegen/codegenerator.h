@@ -24,7 +24,7 @@
 // struttura di ritorno della generazione delle espressioni
 struct ExprGenResult {
     llvm::Value* llvm_value;
-    ValueType type;
+    PrimitiveType type;
 };
 
 class CodeGenerator
@@ -55,12 +55,15 @@ private:
 
     bool isGlobalScope() const;
 
-    llvm::Type* getLLVMType(const ValueType &type);
-    ValueType getValueType(llvm::Type *type);
-    llvm::Value* castValue(llvm::Value* value, ValueType from, ValueType to);
+    llvm::Type* getLLVMType(const Type &type);
+    PrimitiveType getPrimitiveType(llvm::Type *type);
+    llvm::Value* castValue(llvm::Value* value, PrimitiveType from, PrimitiveType to);
+
+    void copyArrayElements(llvm::Value* source, llvm::Value* destination, llvm::ArrayType* arrType, llvm::Type* elementType);
+    void generateArrayAssignment(const LiteralArrayExpr* arrLit, llvm::Value* destination);
+    
 
     void generateStmt(const Stmt* stmt);
-    ExprGenResult generateExpr(const Expr* expr);
 
     void generateScopeStmt(const BlockStmt* st);
     void generateAssignStmt(const AssignmentStmt* st);
@@ -74,6 +77,8 @@ private:
 
     std::vector<llvm::ConstantInt*> collectCaseLabels(const CaseStmt* c, const CaseStmt*& leaf);
     llvm::ConstantInt* generateConstantLabel(const Expr* label);
+
+    ExprGenResult generateExpr(const Expr* expr);
 
     ExprGenResult generateBinaryExpr(const BinaryExpr* s);
     ExprGenResult generateUnaryExpr(const UnaryExpr* expr);

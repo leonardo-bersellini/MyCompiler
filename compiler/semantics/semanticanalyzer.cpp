@@ -1,6 +1,7 @@
 #include "semanticanalyzer.h"
 
 #include <unordered_map>
+#include <string>
 
 #include "toplevel-rules.h"
 
@@ -180,11 +181,12 @@ void SemanticAnalyzer::analyzeAssignment(const AssignmentStmt* s)
     if(symbolExistsAnywhere(s->name))
     {
         // Controllo di tipo nell'operatore di assegnazione 
-        ValueType varType = lookupSymbolInfo(s->name).type;
+        Type varType = lookupSymbolInfo(s->name).type;
 
-        if (!Type::isAssignmentCompatible(varType, valueResult.value_type)) {
+        if (!types::isAssignmentCompatible(varType, valueResult.type)) {
             errorLog->addError("tipo incompatibile nell'assegnazione a " + s->name + "  " +
-                               "[confronto tra " + Type::toString(varType) + " e " + Type::toString(valueResult.value_type) + "]");
+                               "[confronto tra " + types::toString(varType) + " e " 
+                               + types::toString(valueResult.type) + "]");
         }
 
         //controllo isconst
@@ -199,7 +201,7 @@ void SemanticAnalyzer::analyzeAssignment(const AssignmentStmt* s)
 
 void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
 {
-    if(s->type == ValueType::Void) { 
+    if(s->type.primitive == PrimitiveType::Void) { 
         errorLog->addError("variable " + s->name + " declared void");
         return;
     }
@@ -215,13 +217,14 @@ void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
         //risultato dell'espressione in assegnazione, valore che si sta assegnando
         ExprAnalysisResult initResult = analyzeExpr(s->initializer.get());
 
-        if (!Type::isAssignmentCompatible(s->type, initResult.value_type)) {
+        if (!types::isAssignmentCompatible(s->type, initResult.type)) {
             errorLog->addError("tipo incompatibile nell'inizializzazione di " + s->name + "  " +
-                                "[confronto tra " + Type::toString(s->type) + " e " + Type::toString(initResult.value_type) + "]");
+                                "[confronto tra " + types::toString(s->type) + " e " 
+                                + types::toString(initResult.type) + "]");
         }
     }
 
-    if (symbolExistsInCurrentScope(s->name)) {
+    if(symbolExistsInCurrentScope(s->name)) {
         errorLog->addError("redeclaration of variable: " + s->name);
     } else {
         declareSymbol(s->name, SymbolInfo(s->type, s->isConst));
@@ -237,7 +240,7 @@ void SemanticAnalyzer::analyseFunction(const FunctionStmt* s)
     }
 
     //raccolta dei type dei parametri
-    std::vector<ValueType> paramsType;
+    std::vector<Type> paramsType;
 
     for(const FunctionParam& p : s->params) {
         paramsType.push_back(p.type);
@@ -256,7 +259,7 @@ void SemanticAnalyzer::analyseFunction(const FunctionStmt* s)
     currentFunction = &functionTable[s->name];
 
     // ogni funzione non-void deve avere un return valido per ogni path
-    if(s->returnType != ValueType::Void && !allPathsReturn(s->body.get())) {
+    if(s->returnType.primitive != PrimitiveType::Void && !allPathsReturn(s->body.get())) {
         errorLog->addError("not all code paths return a value in function " + s->name);
     }
 
@@ -274,12 +277,12 @@ void SemanticAnalyzer::analyzeReturn(const ReturnStmt* s)
         return;
     }
 
-    if(currentFunction->returnType == ValueType::Void && s->value != nullptr) {
+    if(currentFunction->returnType.primitive == PrimitiveType::Void && s->value != nullptr) {
         errorLog->addError("returning a value in a function declared void");
         return;
     }
 
-    if(currentFunction->returnType != ValueType::Void && s->value == nullptr) {
+    if(currentFunction->returnType.primitive != PrimitiveType::Void && s->value == nullptr) {
         errorLog->addError("return stmt with no value in a function returning non-void");
         return;
     }
@@ -288,9 +291,9 @@ void SemanticAnalyzer::analyzeReturn(const ReturnStmt* s)
         // controllo del tipo dell'espressione (return expr;)
         ExprAnalysisResult res = analyzeExpr(s->value.get());
 
-        if(!Type::isAssignmentCompatible(currentFunction->returnType, res.value_type)) {
-            errorLog->addError("could not convert " + Type::toString(currentFunction->returnType) +
-                               " to " + Type::toString(res.value_type) + " in return");
+        if(!types::isAssignmentCompatible(currentFunction->returnType, res.type)) {
+            errorLog->addError("could not convert " + types::toString(currentFunction->returnType) +
+                               " to " + types::toString(res.type) + " in return");
             return;
         }
     }
@@ -300,7 +303,7 @@ void SemanticAnalyzer::analyzeIf(const IfStmt* s)
 {
     ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
 
-    if(condResult.value_type != ValueType::Bool && condResult.value_type != ValueType::Error) {
+    if(condResult.type.primitive != PrimitiveType::Bool && condResult.type.primitive != PrimitiveType::Error) {
         errorLog->addError("if condition must be of type boolean");
     }
 
@@ -318,7 +321,7 @@ void SemanticAnalyzer::analyzeFor(const ForStmt* s)
     if(s->init) analyzeStmt(s->init.get());
     if(s->condition) {
         ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
-        if(condResult.value_type != ValueType::Bool && condResult.value_type != ValueType::Error) {
+        if(condResult.type.primitive != PrimitiveType::Bool && condResult.type.primitive != PrimitiveType::Error) {
             errorLog->addError("la condizione del for deve essere di tipo bool");
         }
     }
@@ -334,7 +337,7 @@ void SemanticAnalyzer::analyzeFor(const ForStmt* s)
 void SemanticAnalyzer::analyzeWhile(const WhileStmt* s)
 {
     ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
-    if(condResult.value_type != ValueType::Bool && condResult.value_type != ValueType::Error) {
+    if(condResult.type.primitive != PrimitiveType::Bool && condResult.type.primitive != PrimitiveType::Error) {
         errorLog->addError("la condizione del while deve essere di tipo bool");
     }
 
@@ -348,20 +351,20 @@ void SemanticAnalyzer::analyzeSwitch(const SwitchStmt* s)
     ExprAnalysisResult scrutineeResult = analyzeExpr(s->scrutinee.get());
     
     // controllo di validità del tipo dello scrutinee
-    switch (scrutineeResult.value_type)
+    switch (scrutineeResult.type.primitive)
     {
-    case ValueType::Int:
-    case ValueType::Char:
+    case PrimitiveType::Int:
+    case PrimitiveType::Char:
         break;
     
     default:
         errorLog->addError("invalid type in switch condition (" 
-            + Type::toString(scrutineeResult.value_type) + ")");
+            + types::toString(scrutineeResult.type) + ")");
         break;
     }
 
     for(const auto& c : s->cases) {
-        analyzeCase(c.get(), scrutineeResult.value_type);
+        analyzeCase(c.get(), scrutineeResult.type.primitive);
     }
 
     if(s->_default) {
@@ -369,11 +372,11 @@ void SemanticAnalyzer::analyzeSwitch(const SwitchStmt* s)
     }
 }
 
-void SemanticAnalyzer::analyzeCase(const CaseStmt* s, const ValueType& switch_type) 
+void SemanticAnalyzer::analyzeCase(const CaseStmt* s, const PrimitiveType& switch_type) 
 {
     ExprAnalysisResult condResult = analyzeExpr(s->label.get());
 
-    if(condResult.value_type != switch_type) {
+    if(condResult.type.primitive != switch_type) {
         //non considera nessuna promozione automatica
         errorLog->addError("case label value is incompatible with switch value");
         return;
@@ -421,7 +424,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     if(auto s = dynamic_cast<const NumberExpr*>(expr))
     {
         ExprAnalysisResult result;
-        result.value_type = s->isInteger ? ValueType::Int : ValueType::Double;
+        result.type.primitive = s->isInteger ? PrimitiveType::Int : PrimitiveType::Double;
         return result;
     }
 
@@ -429,7 +432,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     else if(auto s = dynamic_cast<const StringExpr*>(expr))
     {
         ExprAnalysisResult result;
-        result.value_type = ValueType::String;
+        result.type.primitive = PrimitiveType::String;
         return result;
     }
 
@@ -437,7 +440,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     else if(auto s = dynamic_cast<const CharExpr*>(expr))
     {
         ExprAnalysisResult result;
-        result.value_type = ValueType::Char;
+        result.type.primitive = PrimitiveType::Char;
         return result;
     }
 
@@ -445,7 +448,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     else if(auto s = dynamic_cast<const BooleanExpr*>(expr))
     {
         ExprAnalysisResult result;
-        result.value_type = ValueType::Bool;
+        result.type.primitive = PrimitiveType::Bool;
         return result;
     }
 
@@ -454,11 +457,43 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     {
         if(!symbolExistsAnywhere(s->name)) {
             errorLog->addError("variable not defined. variable name: " + s->name);
-            return ExprAnalysisResult{ValueType::Error};
+            return ExprAnalysisResult(Type(PrimitiveType::Error));
         }
         ExprAnalysisResult result;
-        result.value_type = lookupSymbolInfo(s->name).type;
+        result.type = lookupSymbolInfo(s->name).type;
         return result;
+    }
+
+    //Array literal Expression
+    else if(auto s = dynamic_cast<const LiteralArrayExpr*>(expr))
+    {
+        if(s->elements.empty()) {
+            errorLog->addError("could not convert empty enclosed-bracket to an array");
+            return ExprAnalysisResult{Type(PrimitiveType::Error)};
+        }
+
+        auto arrayType = analyzeExpr(s->elements.at(0).get()).type;
+
+        for(int i=1; i < s->elements.size(); ++i)
+        {
+            auto type = analyzeExpr(s->elements.at(i).get()).type;
+
+            if(type.primitive != arrayType.primitive) {
+                errorLog->addError("incompatible element of type " + types::toString(type) +
+                                    " in literal array of type " + types::toString(arrayType) + 
+                                    " at index " + std::to_string(i));
+                return ExprAnalysisResult{Type(PrimitiveType::Error)};
+            }
+        }
+
+        Type arr;
+        arr.primitive = types::toPrimitiveType(types::toString(arrayType), true);
+        arr.size = s->elements.size();
+
+        //salva il valore ricostruito nell'espressione
+        s->type = arr.primitive; 
+
+        return ExprAnalysisResult{arr};
     }
 
     // Function Call Expression
@@ -466,20 +501,20 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     {
         if(!functionTable.contains(s->name)) {
             errorLog->addError(s->name + " was not declared in this scope");
-            return ExprAnalysisResult{ValueType::Error};
+            return ExprAnalysisResult(Type(PrimitiveType::Error));
         }
 
         if(s->args.size() != functionTable[s->name].paramTypes.size()) {
             errorLog->addError("errore _#325 - callexpr in analyseExpr");
-            return ExprAnalysisResult{ValueType::Error};
+            return ExprAnalysisResult(Type(PrimitiveType::Error));
         }
 
         for(int i=0; i < s->args.size(); ++i) {
             auto res = analyzeExpr(s->args.at(i).get());
 
-            if(!Type::isAssignmentCompatible(functionTable[s->name].paramTypes.at(i), res.value_type)) {
+            if(!types::isAssignmentCompatible(functionTable[s->name].paramTypes.at(i), res.type)) {
                 errorLog->addError("error _#332 - callexpr in analyze expr");
-                return ExprAnalysisResult{ValueType::Error};
+                return ExprAnalysisResult(Type(PrimitiveType::Error));
             }
         }
 
@@ -498,11 +533,11 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
         //recursive call
         ExprAnalysisResult operandResult = analyzeExpr(s->operand.get());
 
-        ValueType resultType = Type::unaryResultType(s->op, operandResult.value_type);
+        Type resultType = Type(types::unaryResultType(s->op, operandResult.type.primitive));
 
-        if (resultType == ValueType::Error && operandResult.value_type != ValueType::Error) {
+        if (resultType.primitive == PrimitiveType::Error && operandResult.type.primitive != PrimitiveType::Error) {
             errorLog->addError("operatore unario non valido per il tipo " +
-                               Type::toString(operandResult.value_type));
+                               types::toString(operandResult.type));
         }
 
         return ExprAnalysisResult{resultType};
@@ -512,7 +547,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     else if(auto s = dynamic_cast<const ErrorExpr*>(expr))
     {
         ExprAnalysisResult result;
-        result.value_type = ValueType::Error;
+        result.type.primitive = PrimitiveType::Error;
         return result;
     }
 
@@ -528,19 +563,19 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
 
 ExprAnalysisResult SemanticAnalyzer::analyzeBinaryOperation(const BinaryExpr *expr)
 {
-    ValueType leftType = analyzeExpr(expr->left.get()).value_type;
-    ValueType rightType = analyzeExpr(expr->right.get()).value_type;
+    Type leftType = analyzeExpr(expr->left.get()).type;
+    Type rightType = analyzeExpr(expr->right.get()).type;
 
-    ValueType resultType = Type::binaryResultType(expr->op, leftType, rightType);
+    PrimitiveType resultType = types::binaryResultType(expr->op, leftType.primitive, rightType.primitive);
 
-    if(resultType == ValueType::Error) {
+    if(resultType == PrimitiveType::Error) {
         errorLog->addError("operazione non valida tra tipi " +
-                Type::toString(leftType) + " e " + Type::toString(rightType));
+                types::toString(leftType) + " e " + types::toString(rightType));
 
-        return ExprAnalysisResult{ValueType::Error};
+        return ExprAnalysisResult(Type(PrimitiveType::Error));
     }
 
-    return ExprAnalysisResult{resultType};
+    return ExprAnalysisResult(Type(resultType));
 }
 
 /*
@@ -579,7 +614,7 @@ SymbolInfo SemanticAnalyzer::lookupSymbolInfo(const std::string &name) const {
     for(int i = scopeStack.size() - 1; i >= 0; i--) {
         if (scopeStack[i].contains(name)) return scopeStack[i].at(name);
     }
-    return SymbolInfo(ValueType::Error, false); // non trovato
+    return SymbolInfo(Type(PrimitiveType::Error), false); // non trovato
 }
 
 /*
