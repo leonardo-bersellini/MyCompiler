@@ -28,7 +28,10 @@ bool isValidAtTopLevel(const Stmt& s) {
 bool isWinMain(const Stmt* st) {
     if(auto s = dynamic_cast<const FunctionStmt*>(st)) 
     {
-        if(s->returnType.primitive != PrimitiveType::Int) return false;
+        if(auto* v = std::get_if<PrimitiveType>(&s->returnType.category)) {
+            if(*v != PrimitiveType::Int) return false;
+        }
+        else return false;
 
         auto found = std::find(valid_winmain_identifiers.begin(), valid_winmain_identifiers.end(), s->name);
         if(found == valid_winmain_identifiers.end()) return false;

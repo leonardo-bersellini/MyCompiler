@@ -5,7 +5,7 @@
 #include <string>
 
 #include "keywords.h"
-#include "utils/ansi.h"
+#include "utils/ansi/ansi.h"
 
 Lexer::Lexer() {}
 

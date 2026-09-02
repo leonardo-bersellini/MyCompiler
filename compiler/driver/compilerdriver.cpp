@@ -12,7 +12,7 @@
 #include "codegen/codegenerator.h"
 
 #include "commandlineparser/commandlineparser.h"
-#include "utils/ansi.h"
+#include "utils/ansi/ansi.h"
 
 #include "version.h" //generato da cmake
 

@@ -24,7 +24,7 @@
 // struttura di ritorno della generazione delle espressioni
 struct ExprGenResult {
     llvm::Value* llvm_value;
-    PrimitiveType type;
+    Type type;
 };
 
 class CodeGenerator
@@ -56,7 +56,7 @@ private:
     bool isGlobalScope() const;
 
     llvm::Type* getLLVMType(const Type &type);
-    PrimitiveType getPrimitiveType(llvm::Type *type);
+    Type getType(llvm::Type *type);
     llvm::Value* castValue(llvm::Value* value, PrimitiveType from, PrimitiveType to);
 
     void copyArrayElements(llvm::Value* source, llvm::Value* destination, llvm::ArrayType* arrType, llvm::Type* elementType);

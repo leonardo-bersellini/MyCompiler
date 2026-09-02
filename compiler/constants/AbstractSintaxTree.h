@@ -10,7 +10,7 @@
 #include "token.h"
 #include "symbols.h"
 
-#include "utils/ansi.h"
+#include "utils/ansi/ansi.h"
 
 
 // Expressions - produce un valore
@@ -68,7 +68,7 @@ public:
 //array letterale := [value, value, value]
 class LiteralArrayExpr : public Expr {
 public:
-    mutable PrimitiveType type;
+    mutable ArrayType type;
     std::vector<std::unique_ptr<Expr>> elements;
 };
 

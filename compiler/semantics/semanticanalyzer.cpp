@@ -201,7 +201,7 @@ void SemanticAnalyzer::analyzeAssignment(const AssignmentStmt* s)
 
 void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
 {
-    if(s->type.primitive == PrimitiveType::Void) { 
+    if(s->type.is(PrimitiveType::Void)) { 
         errorLog->addError("variable " + s->name + " declared void");
         return;
     }
@@ -259,7 +259,7 @@ void SemanticAnalyzer::analyseFunction(const FunctionStmt* s)
     currentFunction = &functionTable[s->name];
 
     // ogni funzione non-void deve avere un return valido per ogni path
-    if(s->returnType.primitive != PrimitiveType::Void && !allPathsReturn(s->body.get())) {
+    if(!s->returnType.is(PrimitiveType::Void) && !allPathsReturn(s->body.get())) {
         errorLog->addError("not all code paths return a value in function " + s->name);
     }
 
@@ -277,12 +277,12 @@ void SemanticAnalyzer::analyzeReturn(const ReturnStmt* s)
         return;
     }
 
-    if(currentFunction->returnType.primitive == PrimitiveType::Void && s->value != nullptr) {
+    if(currentFunction->returnType.is(PrimitiveType::Void) && s->value != nullptr) {
         errorLog->addError("returning a value in a function declared void");
         return;
     }
 
-    if(currentFunction->returnType.primitive != PrimitiveType::Void && s->value == nullptr) {
+    if(!currentFunction->returnType.is(PrimitiveType::Void) && s->value == nullptr) {
         errorLog->addError("return stmt with no value in a function returning non-void");
         return;
     }
@@ -303,7 +303,7 @@ void SemanticAnalyzer::analyzeIf(const IfStmt* s)
 {
     ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
 
-    if(condResult.type.primitive != PrimitiveType::Bool && condResult.type.primitive != PrimitiveType::Error) {
+    if(!condResult.type.is(PrimitiveType::Bool) && !condResult.type.is(PrimitiveType::Error)) {
         errorLog->addError("if condition must be of type boolean");
     }
 
@@ -321,7 +321,7 @@ void SemanticAnalyzer::analyzeFor(const ForStmt* s)
     if(s->init) analyzeStmt(s->init.get());
     if(s->condition) {
         ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
-        if(condResult.type.primitive != PrimitiveType::Bool && condResult.type.primitive != PrimitiveType::Error) {
+        if(!condResult.type.is(PrimitiveType::Bool) && !condResult.type.is(PrimitiveType::Error)) {
             errorLog->addError("la condizione del for deve essere di tipo bool");
         }
     }
@@ -337,7 +337,7 @@ void SemanticAnalyzer::analyzeFor(const ForStmt* s)
 void SemanticAnalyzer::analyzeWhile(const WhileStmt* s)
 {
     ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
-    if(condResult.type.primitive != PrimitiveType::Bool && condResult.type.primitive != PrimitiveType::Error) {
+    if(!condResult.type.is(PrimitiveType::Bool) && !condResult.type.is(PrimitiveType::Error)) {
         errorLog->addError("la condizione del while deve essere di tipo bool");
     }
 
@@ -351,7 +351,7 @@ void SemanticAnalyzer::analyzeSwitch(const SwitchStmt* s)
     ExprAnalysisResult scrutineeResult = analyzeExpr(s->scrutinee.get());
     
     // controllo di validità del tipo dello scrutinee
-    switch (scrutineeResult.type.primitive)
+    switch (scrutineeResult.type.asPrimitive())
     {
     case PrimitiveType::Int:
     case PrimitiveType::Char:
@@ -364,7 +364,7 @@ void SemanticAnalyzer::analyzeSwitch(const SwitchStmt* s)
     }
 
     for(const auto& c : s->cases) {
-        analyzeCase(c.get(), scrutineeResult.type.primitive);
+        analyzeCase(c.get(), scrutineeResult.type.asPrimitive());
     }
 
     if(s->_default) {
@@ -376,7 +376,7 @@ void SemanticAnalyzer::analyzeCase(const CaseStmt* s, const PrimitiveType& switc
 {
     ExprAnalysisResult condResult = analyzeExpr(s->label.get());
 
-    if(condResult.type.primitive != switch_type) {
+    if(condResult.type.asPrimitive() != switch_type) {
         //non considera nessuna promozione automatica
         errorLog->addError("case label value is incompatible with switch value");
         return;
@@ -424,7 +424,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     if(auto s = dynamic_cast<const NumberExpr*>(expr))
     {
         ExprAnalysisResult result;
-        result.type.primitive = s->isInteger ? PrimitiveType::Int : PrimitiveType::Double;
+        result.type = s->isInteger ? Type(PrimitiveType::Int) : Type(PrimitiveType::Double);
         return result;
     }
 
@@ -432,7 +432,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     else if(auto s = dynamic_cast<const StringExpr*>(expr))
     {
         ExprAnalysisResult result;
-        result.type.primitive = PrimitiveType::String;
+        result.type = Type(PrimitiveType::String);
         return result;
     }
 
@@ -440,7 +440,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     else if(auto s = dynamic_cast<const CharExpr*>(expr))
     {
         ExprAnalysisResult result;
-        result.type.primitive = PrimitiveType::Char;
+        result.type = Type(PrimitiveType::Char);
         return result;
     }
 
@@ -448,7 +448,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     else if(auto s = dynamic_cast<const BooleanExpr*>(expr))
     {
         ExprAnalysisResult result;
-        result.type.primitive = PrimitiveType::Bool;
+        result.type = Type(PrimitiveType::Bool);
         return result;
     }
 
@@ -478,7 +478,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
         {
             auto type = analyzeExpr(s->elements.at(i).get()).type;
 
-            if(type.primitive != arrayType.primitive) {
+            if(type.asPrimitive() != arrayType.asPrimitive()) {
                 errorLog->addError("incompatible element of type " + types::toString(type) +
                                     " in literal array of type " + types::toString(arrayType) + 
                                     " at index " + std::to_string(i));
@@ -486,14 +486,13 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
             }
         }
 
-        Type arr;
-        arr.primitive = types::toPrimitiveType(types::toString(arrayType), true);
-        arr.size = s->elements.size();
+        auto elementType = arrayType.asPrimitive();
+        ArrayType arr(elementType, s->elements.size());
 
         //salva il valore ricostruito nell'espressione
-        s->type = arr.primitive; 
+        s->type = arr; 
 
-        return ExprAnalysisResult{arr};
+        return ExprAnalysisResult{Type{arr}};
     }
 
     // Function Call Expression
@@ -533,9 +532,9 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
         //recursive call
         ExprAnalysisResult operandResult = analyzeExpr(s->operand.get());
 
-        Type resultType = Type(types::unaryResultType(s->op, operandResult.type.primitive));
+        Type resultType = Type(types::unaryResultType(s->op, operandResult.type.asPrimitive()));
 
-        if (resultType.primitive == PrimitiveType::Error && operandResult.type.primitive != PrimitiveType::Error) {
+        if (resultType.is(PrimitiveType::Error) && !operandResult.type.is(PrimitiveType::Error)) {
             errorLog->addError("operatore unario non valido per il tipo " +
                                types::toString(operandResult.type));
         }
@@ -547,7 +546,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     else if(auto s = dynamic_cast<const ErrorExpr*>(expr))
     {
         ExprAnalysisResult result;
-        result.type.primitive = PrimitiveType::Error;
+        result.type = Type(PrimitiveType::Error);
         return result;
     }
 
@@ -566,7 +565,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeBinaryOperation(const BinaryExpr *ex
     Type leftType = analyzeExpr(expr->left.get()).type;
     Type rightType = analyzeExpr(expr->right.get()).type;
 
-    PrimitiveType resultType = types::binaryResultType(expr->op, leftType.primitive, rightType.primitive);
+    PrimitiveType resultType = types::binaryResultType(expr->op, leftType.asPrimitive(), rightType.asPrimitive());
 
     if(resultType == PrimitiveType::Error) {
         errorLog->addError("operazione non valida tra tipi " +

@@ -11,7 +11,7 @@
 #include <filesystem>
 #include <windows.h>
 
-#include "utils/ansi.h"
+#include "utils/ansi/ansi.h"
 namespace clr = ansi::color;
 
 /**
@@ -259,26 +259,25 @@ bool CodeGenerator::isGlobalScope() const
 
 llvm::Type* CodeGenerator::getLLVMType(const Type &type)
 {
-    switch(type.primitive) {
-        case PrimitiveType::Int : return llvm::Type::getInt32Ty(Context);
-            break;
-        case PrimitiveType::Double : return llvm::Type::getDoubleTy(Context);
-            break;
-        case PrimitiveType::Bool : return llvm::Type::getInt1Ty(Context);
-            break;
-        case PrimitiveType::Char : return llvm::Type::getInt8Ty(Context);
-            break;
-        case PrimitiveType::ArrayInt: return llvm::ArrayType::get(getLLVMType(Type(PrimitiveType::Int)), type.size.value());
-            break;
-        case PrimitiveType::ArrayDouble: return llvm::ArrayType::get(getLLVMType(Type(PrimitiveType::Double)), type.size.value());
-            break;
-        case PrimitiveType::ArrayChar: return llvm::ArrayType::get(getLLVMType(Type(PrimitiveType::Char)), type.size.value());
-            break;
-        case PrimitiveType::ArrayBool: return llvm::ArrayType::get(getLLVMType(Type(PrimitiveType::Bool)), type.size.value());
-            break;
-        default : return nullptr;
-            break;
-    }
+    return std::visit(TypeVisitor{
+        [this](const PrimitiveType& t) -> llvm::Type* {
+            switch(t) {
+                case PrimitiveType::Int : return llvm::Type::getInt32Ty(Context);
+                    break;
+                case PrimitiveType::Double : return llvm::Type::getDoubleTy(Context);
+                    break;
+                case PrimitiveType::Bool : return llvm::Type::getInt1Ty(Context);
+                    break;
+                case PrimitiveType::Char : return llvm::Type::getInt8Ty(Context);
+                    break;
+                default : return nullptr;
+                    break;
+            }
+        },
+        [this](const ArrayType& a) -> llvm::Type* {
+            return llvm::ArrayType::get(getLLVMType(Type(a.elementType)), a.size);
+        },
+    }, type.category);
 }
 
 /*
@@ -286,37 +285,39 @@ llvm::Type* CodeGenerator::getLLVMType(const Type &type)
  * dell'enumerazione standard del nostro ast.
  */
 
-PrimitiveType CodeGenerator::getPrimitiveType(llvm::Type *type)
+Type CodeGenerator::getType(llvm::Type *type)
 {
     if (type->isIntegerTy(1))
-        return PrimitiveType::Bool;
+        return Type(PrimitiveType::Bool);
 
     if (type->isIntegerTy(8))
-        return PrimitiveType::Char;
+        return Type(PrimitiveType::Char);
 
     if (type->isIntegerTy(32))
-        return PrimitiveType::Int;
+        return Type(PrimitiveType::Int);
 
     if (type->isDoubleTy())
-        return PrimitiveType::Double;
+        return Type(PrimitiveType::Double);
 
     if (type->isVoidTy())
-        return PrimitiveType::Void;
+        return Type(PrimitiveType::Void);
 
     if(type->isArrayTy()) {
-        PrimitiveType elementTy = getPrimitiveType(type->getArrayElementType());
+        PrimitiveType elementTy = getType(type->getArrayElementType()).asPrimitive();
 
         //dall'elemento singolo si deduce il tipo dell'array
         switch (elementTy) {
-            case PrimitiveType::Int:    return PrimitiveType::ArrayInt;
-            case PrimitiveType::Double: return PrimitiveType::ArrayDouble;
-            case PrimitiveType::Char:   return PrimitiveType::ArrayChar;
-            case PrimitiveType::Bool:   return PrimitiveType::ArrayBool;
-            default: return PrimitiveType::Error;
+            case PrimitiveType::Int:
+            case PrimitiveType::Double:
+            case PrimitiveType::Char:
+            case PrimitiveType::Bool:
+                return Type{ArrayType(elementTy, type->getArrayNumElements())};
+
+            default: return Type(PrimitiveType::Error);
         }
     }
 
-    return PrimitiveType::Error;
+    return Type(PrimitiveType::Error);
 }
 
 /*
@@ -385,7 +386,7 @@ void CodeGenerator::copyArrayElements(llvm::Value* source, llvm::Value* destinat
 void CodeGenerator::generateArrayAssignment(const LiteralArrayExpr* arrLit, llvm::Value* destination)
 {
     auto srcVal = generateExpr(arrLit); // puntatore all'array temporaneo del literal
-    llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(getLLVMType(Type(arrLit->type, arrLit->elements.size())));
+    llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(getLLVMType(Type(arrLit->type)));
     llvm::Type* elementType = arrType->getElementType();
 
     copyArrayElements(srcVal.llvm_value, destination, arrType, elementType);
@@ -508,9 +509,9 @@ void CodeGenerator::generateScopeStmt(const BlockStmt *st)
 void CodeGenerator::generateAssignStmt(const AssignmentStmt *st)
 {
     auto symbol = lookupSymbol(st->name);
-    PrimitiveType symbolType = getPrimitiveType(symbol->getAllocatedType());
+    Type symbolType = getType(symbol->getAllocatedType());
 
-    if(types::isArray(symbolType)) 
+    if(symbolType.isArray()) 
     {
         if(auto arrLit = dynamic_cast<const LiteralArrayExpr*>(st->value.get())) {
             generateArrayAssignment(arrLit, symbol);
@@ -527,7 +528,7 @@ void CodeGenerator::generateAssignStmt(const AssignmentStmt *st)
     } else {
         auto value = generateExpr(st->value.get());
         // conversione dal tipo del valore al tipo della variabile
-        auto casted = castValue(value.llvm_value, value.type, getPrimitiveType(symbol->getAllocatedType()));
+        auto casted = castValue(value.llvm_value, value.type.asPrimitive(), getType(symbol->getAllocatedType()).asPrimitive());
 
         Builder.CreateStore(casted, symbol);
     }
@@ -546,12 +547,23 @@ void CodeGenerator::generateDeclarationStmt(const DeclarationStmt *st)
 
     if(st->initializer) 
     {
-        if(auto arrLiteral = dynamic_cast<const LiteralArrayExpr*>(st->initializer.get())) {
-            generateArrayAssignment(arrLiteral, alloc);
+        if(st->type.isArray()) {
+            if(auto arrLiteral = dynamic_cast<const LiteralArrayExpr*>(st->initializer.get())) {
+                generateArrayAssignment(arrLiteral, alloc);
+            } else {
+                //inizializzazione arr1 = arr2
+                auto varExpr = dynamic_cast<const VariableExpr*>(st->initializer.get());
+                llvm::Value* source = lookupSymbol(varExpr->name);
+                
+                llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(lookupSymbol(st->name)->getAllocatedType());
+                llvm::Type* elementType = arrType->getElementType();
+
+                copyArrayElements(source, alloc, arrType, elementType);
+            }
         } else {
             // store del valore in inizializzazione
             auto val = generateExpr(st->initializer.get());
-            auto casted = castValue(val.llvm_value, val.type, st->type.primitive);
+            auto casted = castValue(val.llvm_value, val.type.asPrimitive(), st->type.asPrimitive());
             Builder.CreateStore(casted, alloc);
         }
     }
@@ -595,7 +607,7 @@ void CodeGenerator::generateFunctionStmt(const FunctionStmt *st)
 
     //le funzioni void possono terminare senza return esplicito
     if(!Builder.GetInsertBlock()->getTerminator()) {
-        if(st->returnType.primitive == PrimitiveType::Void)
+        if(st->returnType.is(PrimitiveType::Void))
             Builder.CreateRetVoid();
     }
 
@@ -894,9 +906,9 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
     else if(auto s = dynamic_cast<const VariableExpr*>(expr))
     {
         llvm::AllocaInst *val = lookupSymbol(s->name);
-        PrimitiveType type = getPrimitiveType(val->getAllocatedType());
+        Type type = getType(val->getAllocatedType());
 
-        if(types::isArray(type)) {
+        if(type.isArray()) {
             // non si può eseguire un load singolo su un array
             return ExprGenResult{val, type};
         }
@@ -910,7 +922,7 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
     // Array Literal Expression
     else if(auto s = dynamic_cast<const LiteralArrayExpr*>(expr))
     {
-        llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(getLLVMType(Type(s->type, s->elements.size())));
+        llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(getLLVMType(Type{s->type}));
         llvm::AllocaInst* array = Builder.CreateAlloca(arrType);
 
         int index = 0;
@@ -930,7 +942,7 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
             index++;
         }
 
-        return ExprGenResult{array, s->type};
+        return ExprGenResult{array, Type{s->type}};
     }
 
     // Function Call Expression
@@ -946,7 +958,7 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
 
         return ExprGenResult {
             Builder.CreateCall(callee, args, s->name),
-            getPrimitiveType(callee->getReturnType())
+            getType(callee->getReturnType())
         };
     }
 
@@ -972,12 +984,12 @@ ExprGenResult CodeGenerator::generateBinaryExpr(const BinaryExpr *s)
 
     //TODO -> add NOT logico
 
-    PrimitiveType resultType = types::binaryResultType(s->op, left.type, right.type);
-    PrimitiveType promoteType = types::promotionType(left.type, right.type);
+    PrimitiveType resultType = types::binaryResultType(s->op, left.type.asPrimitive(), right.type.asPrimitive());
+    PrimitiveType promoteType = types::promotionType(left.type.asPrimitive(), right.type.asPrimitive());
 
     // conversione implicita
-    llvm::Value *L = castValue(left.llvm_value, left.type, promoteType);
-    llvm::Value *R = castValue(right.llvm_value, right.type, promoteType);
+    llvm::Value *L = castValue(left.llvm_value, left.type.asPrimitive(), promoteType);
+    llvm::Value *R = castValue(right.llvm_value, right.type.asPrimitive(), promoteType);
 
     auto createArithmeticOp = [&](auto intOp, auto floatOp) -> ExprGenResult {
         llvm::Value *value;
@@ -1071,7 +1083,7 @@ ExprGenResult CodeGenerator::generateUnaryExpr(const UnaryExpr *expr)
         llvm::Value* value;
         PrimitiveType resultType;
 
-        if(operand.type == PrimitiveType::Double)
+        if(operand.type.is(PrimitiveType::Double))
         {
             value = floatOp();
             resultType = PrimitiveType::Double;

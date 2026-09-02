@@ -265,7 +265,7 @@ std::unique_ptr<Stmt> Parser::parseBranchBody()
 
 Type Parser::parseArrayType()
 {
-    auto type = Type(types::toPrimitiveType(advance().lexeme, true)); //type keyword
+    PrimitiveType elementType = types::toPrimitiveType(advance().lexeme); //type keyword
 
     expect(TokenType::LBracket, true);
 
@@ -276,16 +276,18 @@ Type Parser::parseArrayType()
     if(auto d = dynamic_cast<const NumberExpr*>(size_expr.get())) 
     {
         if(!d->isInteger) {
-            errorLog->addError("size identifier in array must be integer", tokens.at(currentPos).position);
+            errorLog->addError("size identifier in array must be integer", peek().position);
             recoveryHandler.synchronize({TokenType::Semicolon});
             return Type(PrimitiveType::Error);
         }
 
-        Type arraytype;
-        arraytype.primitive = type.primitive;
-        arraytype.size = d->value;
-        
-        return arraytype;
+        if(d->value < 0.0) {
+            errorLog->addError("size identifier cannot be negative", peek().position);
+            return Type(PrimitiveType::Error);
+        }
+
+        ArrayType arr(elementType, static_cast<std::size_t>(d->value));
+        return Type{arr};
         
     } else {
         errorLog->addError("expected a numeric expression as array size identifier", tokens.at(currentPos).position);
@@ -334,7 +336,7 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt(bool isConstDeclaration)
     if(peek(1).type == TokenType::LBracket) {
         type = parseArrayType(); 
     } else {
-        type.primitive = types::toPrimitiveType(advance().lexeme);
+        type = Type{types::toPrimitiveType(advance().lexeme)};
     }
 
     if(peek(1).type == TokenType::Equal)
@@ -398,13 +400,13 @@ std::unique_ptr<Stmt> Parser::parseFunctionStmt()
     if(peek(1).type == TokenType::LBracket) {
         returnType = parseArrayType();
     } else {
-        returnType.primitive = types::toPrimitiveType(advance().lexeme);
+        returnType = Type{types::toPrimitiveType(advance().lexeme)};
     }
 
     std::string identifier = peek().lexeme; // consuma nome funzione
     bool valid = expect(TokenType::Identifier);
 
-    if(returnType.primitive == PrimitiveType::Error) errorLog->addError("error: returning <errortype> in function: " + identifier);
+    if(returnType.isError()) errorLog->addError("error: returning <errortype> in function: " + identifier);
     if(!valid) {
         recoveryHandler.synchronize({TokenType::TypeKeyword});
         return std::make_unique<ErrorStmt>();
@@ -423,7 +425,7 @@ std::unique_ptr<Stmt> Parser::parseFunctionStmt()
             isConst = true;
         }
 
-        Type paramType = Type(types::toPrimitiveType(advance().lexeme)); // consuma tipo parametro
+        Type paramType = Type{types::toPrimitiveType(advance().lexeme)}; // consuma tipo parametro
         std::string paramName = advance().lexeme;                 // consuma nome parametro
 
         params.push_back(FunctionParam(paramType, paramName, isConst));

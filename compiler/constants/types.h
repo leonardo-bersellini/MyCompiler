@@ -4,7 +4,14 @@
 #include <string>
 #include <optional>
 #include <stdexcept>
+#include <variant>
+
 #include "token.h"
+
+#include "utils/visitor/template_visitor.h"
+
+template<class... Ts>
+using TypeVisitor = overloaded<Ts...>;
 
 /**
  *  TYPES
@@ -15,28 +22,63 @@
  */
 
 enum class PrimitiveType {
-    Int,    ArrayInt,
-    Double, ArrayDouble,
-    Char,   ArrayChar,
-    Bool,   ArrayBool,
+    Int,   
+    Double, 
+    Char,
+    Bool,
     String,
     Void,
     Error
 };
 
 
+struct ArrayType 
+{
+    ArrayType() : elementType(PrimitiveType::Void), size(0) {}
+    ArrayType(const PrimitiveType t, const std::size_t s) : elementType(t), size(s) {}
+    PrimitiveType elementType;
+    std::size_t size;
+
+    bool operator==(const ArrayType& other) const {
+        if(elementType != other.elementType) return false;
+        return size == other.size;
+    }
+
+};
+
+/*
+ * Type
+ * Type rappresenta il tipo di una variabile, che può essere primitivo o di un tipo più 
+ * strutturato (come arraytype).
+ * Per questo type non fa altro che contenere una variante che può assumere un valore possibile
+ * del tipo di una variabile.
+ */
+
+// variante: possibili tipi assunti da Type
+using TypeCategory = std::variant<PrimitiveType, ArrayType>;
+
 struct Type {
 public:
-    Type() = default;
-    explicit Type(const PrimitiveType t) : primitive(t), size(std::nullopt) {}
-    explicit Type(const PrimitiveType t, const std::size_t s) : primitive(t), size(s) {}
-    
-    PrimitiveType primitive;
-    std::optional<std::size_t> size = std::nullopt; //per array
+    TypeCategory category;
 
-    bool operator==(const Type& other) const {
-        if(primitive != other.primitive) return false;
-        return size == other.size; // std::optional supporta == di default
+    bool is(PrimitiveType p) const {
+        return std::holds_alternative<PrimitiveType>(category) && std::get<PrimitiveType>(category) == p;
+    }
+
+    bool isArray() const {
+        return std::holds_alternative<ArrayType>(category);
+    }
+
+    bool isError() const {
+        return std::visit(TypeVisitor{
+            [](const PrimitiveType& p) { return p == PrimitiveType::Error; },
+            [](const ArrayType& a) { return a.elementType == PrimitiveType::Error; }
+        }, category);
+    }
+
+    PrimitiveType asPrimitive() const {
+        if (std::holds_alternative<PrimitiveType>(category)) return std::get<PrimitiveType>(category);
+        return PrimitiveType::Error;
     }
 };
 
@@ -45,7 +87,6 @@ namespace types
 {
     inline bool isNumeric(PrimitiveType t);
     inline bool isTextual(PrimitiveType t);
-    inline bool isArray(PrimitiveType t);
     inline bool isAssignmentCompatible(Type destination, Type source);
     inline bool isEqualityComparable(PrimitiveType left, PrimitiveType right);
     inline bool isRelationalComparable(PrimitiveType left, PrimitiveType right);
@@ -58,7 +99,7 @@ namespace types
     inline PrimitiveType unaryResultType(TokenType _operator, PrimitiveType left);
     inline PrimitiveType promotionType(PrimitiveType first, PrimitiveType second);
     inline std::string toString(const Type& type);
-    inline PrimitiveType toPrimitiveType(const std::string& typeName, bool isArray = false);
+    inline PrimitiveType toPrimitiveType(const std::string& typeName);
 
     // TODO aggiungere commenti alla sezione Type
 }
@@ -80,15 +121,6 @@ inline bool types::isTextual(PrimitiveType t) {
 }
 
 /*
- *  Ritorna true se il tipo è riconducibile ad un array
- */
-
-inline bool types::isArray(PrimitiveType t) {
-    return (t == PrimitiveType::ArrayInt || t == PrimitiveType::ArrayDouble ||
-            t == PrimitiveType::ArrayChar || t == PrimitiveType::ArrayBool);
-}
-
-/*
  * Questa funzione controlla se un'operazione di assegnazione è fattibile in base ai tipi degli
  * operandi.
  * I due parametri rappresentano il tipo della variabile a cui si assegna il valore (variableType) ed
@@ -96,23 +128,35 @@ inline bool types::isArray(PrimitiveType t) {
  * es: int x = 5.0; (variableType è int mentre assignType è double).
  */
 
-inline bool types::isAssignmentCompatible(Type destination, Type source) 
+inline bool types::isAssignmentCompatible(Type destination, Type source)
 {
-    if (destination.primitive == PrimitiveType::Error) return true;  // errore già segnalato altrove, non duplicare
-    if (source.primitive == PrimitiveType::Error) return true;
+    return std::visit(TypeVisitor{
+        [](const PrimitiveType& d, const PrimitiveType& s) -> bool {
+            if(d == PrimitiveType::Error || s == PrimitiveType::Error) return true; // errore già segnalato altrove, non duplicare
+            if(d == s) return true;
+            // promozione Int -> Double
+            if (d == PrimitiveType::Double && s == PrimitiveType::Int) return true;
+            return false;
+        },
+        [](const PrimitiveType& d, const ArrayType& s) -> bool {
+            return false;
+        },
+        [](const ArrayType& d, const PrimitiveType s) -> bool {
+            return false;
+        },
+        [](const ArrayType& d, const ArrayType& s) -> bool {
+            if(d.elementType == PrimitiveType::Error || s.elementType == PrimitiveType::Error) return false;
+            if(d.elementType != s.elementType) return false;
+            return d.size == s.size;
+        },
 
-    if (destination == source) return true;
-
-    // promozione Int -> Double
-    if (destination.primitive == PrimitiveType::Double && source.primitive == PrimitiveType::Int) return true;
-
-    return false;
+    }, destination.category, source.category);
 }
 
 /*
  * Questa funzione permette di stabilire se due tipi possono essere confrontati
  * tra loro.
-  */
+ */
 
 inline bool types::isEqualityComparable(PrimitiveType left, PrimitiveType right)
 {
@@ -284,60 +328,34 @@ inline PrimitiveType types::promotionType(PrimitiveType first, PrimitiveType sec
     return PrimitiveType::Error;
 }
 
-/*
- * Converte un valore di PrimitiveType in stringa letterale.
- * Le stringhe ritornate da questa funzione devono essere complementari a quelle 
- * controllare nella funzione inversa (toPrimitiveType). In caso contrario, una conversione
- * prima a stringa e poi di nuovo a primitive risulterebbe in un errore.
- */
-
 inline std::string types::toString(const Type& type) {
-    switch(type.primitive) {
-    case PrimitiveType::Int: return "int";
-        break;
-    case PrimitiveType::Double: return "double";
-        break;
-    case PrimitiveType::String: return "string";
-        break;
-    case PrimitiveType::Char: return "char";
-        break;
-    case PrimitiveType::Bool: return "bool";
-        break;
-    case PrimitiveType::Error: return "Error";
-        break;
-    case PrimitiveType::Void: return "void";
-        break;
-    }
+    return std::visit(TypeVisitor{
+        [](const PrimitiveType& t) -> std::string {
+            switch(t) {
+                case PrimitiveType::Int:    return "int";
+                case PrimitiveType::Double: return "double";
+                case PrimitiveType::Char:   return "char";
+                case PrimitiveType::Bool:   return "bool";
+                case PrimitiveType::String:  return "string";
+                case PrimitiveType::Void:    return "void";
+                case PrimitiveType::Error:   return "error";
+            }
+            return "Unknown";
+        },
+        [](const ArrayType& a) -> std::string {
+            std::string base_type = toString(Type{a.elementType});
+            return base_type + "[" + std::to_string(a.size) + "]";
+        },
 
-    if(isArray(type.primitive)) 
-    {
-        std::string base_type;
-        switch (type.primitive) {
-            case PrimitiveType::ArrayInt:    base_type = "int";
-                break;
-            case PrimitiveType::ArrayDouble: base_type = "double";
-                break;
-            case PrimitiveType::ArrayChar:   base_type = "char";
-                break;
-            case PrimitiveType::ArrayBool:   base_type = "bool";
-                break;
-        
-            default: throw std::runtime_error("internal error in types::tostring. control isArray failed");
-        }
-
-        std::string t = base_type + "[" + std::to_string(type.size.value()) + "]";
-        return t;
-    }
-
-    return "Unknown";
+    }, type.category);
 }
 
-inline PrimitiveType types::toPrimitiveType(const std::string& typeName, bool isArray) {
-    if (typeName == "int")    return isArray ? PrimitiveType::ArrayInt : PrimitiveType::Int;
-    if (typeName == "double") return isArray ? PrimitiveType::ArrayDouble : PrimitiveType::Double;
+inline PrimitiveType types::toPrimitiveType(const std::string& typeName) {
+    if (typeName == "int")    return PrimitiveType::Int;
+    if (typeName == "double") return PrimitiveType::Double;
     if (typeName == "string") return PrimitiveType::String;
-    if (typeName == "char")   return isArray ?  PrimitiveType::ArrayChar : PrimitiveType::Char;
-    if (typeName == "bool")   return isArray ?  PrimitiveType::ArrayBool : PrimitiveType::Bool;
+    if (typeName == "char")   return PrimitiveType::Char;
+    if (typeName == "bool")   return PrimitiveType::Bool;
     if( typeName == "void")   return PrimitiveType::Void;
     return PrimitiveType::Error;
 }
