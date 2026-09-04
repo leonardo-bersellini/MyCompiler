@@ -104,12 +104,6 @@ std::unique_ptr<Stmt> Parser::parseStatement()
         // Nuovo Scope
         return parseScopeStmt();
     }
-    else if(check(TokenType::Identifier) && peek(1).type == TokenType::Equal)
-    {
-        // Assegnazione
-
-        return parseAssignStmt();
-    }
     else if(check(TokenType::TypeKeyword))
     {
         //Dichiarazione (anche Array) o Funzione
@@ -183,9 +177,14 @@ std::unique_ptr<Stmt> Parser::parseStatement()
         return std::make_unique<ContinueStmt>();
 
     } else {
-        // Espressione
+        // Assegnazione o Espressione
 
-        auto expr = parseExpr();   //risolve direttamente l'espressione
+        auto expr = parseExpr();
+
+        if(check(TokenType::Equal)) {
+            return parseAssignStmt(std::move(expr));
+        }
+
         expect(TokenType::Semicolon);
 
         //ritorna uno stmt di espressione
@@ -303,18 +302,30 @@ Type Parser::parseArrayType()
  * Caso diverso dall'assegnazione gestita in inizializzazione.
  */
 
-std::unique_ptr<Stmt> Parser::parseAssignStmt()
+std::unique_ptr<Stmt> Parser::parseAssignStmt(std::unique_ptr<Expr> target)
 {
-    std::string name = advance().lexeme; //consuma l'identificatore
+    if(!target->isLValue()) {
+        errorLog->addError("could not resolve an assignment on an expression which is not an lvalue");
+        recoveryHandler.synchronize({TokenType::Semicolon});
+        return std::make_unique<ErrorStmt>();
+    }
+
+    // ricostruzione del nome letterale del target
+    std::string name;
+    if(auto varExpr = dynamic_cast<const VariableExpr*>(target.get())) {
+        name = varExpr->name;
+    }
+
     advance();                          //consuma '='
-    auto expr = parseExpr();            //rimangono i token dell'espressione
+    auto expr = parseExpr();            //espressione rvalue
 
     expect(TokenType::Semicolon, true);     //expect ; after
 
     //ritorna uno stmt di assegnazione
     auto stmt = std::make_unique<AssignmentStmt>();
-    stmt->name = name;
+    stmt->target = std::move(target);
     stmt->value = std::move(expr);
+    stmt->target_name = std::move(name);
     return stmt;
 }
 
@@ -362,9 +373,8 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt(bool isConstDeclaration)
         d->name = name;
         d->initializer = std::move(initExpr);
         return d;
-    }
-    else
-    {
+        
+    } else {
         // --- Dichiarazione pura --- //
 
         std::string name = peek().lexeme;     // legge Identifier

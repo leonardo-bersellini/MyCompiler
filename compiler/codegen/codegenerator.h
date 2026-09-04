@@ -59,6 +59,8 @@ private:
     Type getType(llvm::Type *type);
     llvm::Value* castValue(llvm::Value* value, PrimitiveType from, PrimitiveType to);
 
+    llvm::Value* generateLvalueAddress(const Expr* target);
+
     void copyArrayElements(llvm::Value* source, llvm::Value* destination, llvm::ArrayType* arrType, llvm::Type* elementType);
     void generateArrayAssignment(const LiteralArrayExpr* arrLit, llvm::Value* destination);
     

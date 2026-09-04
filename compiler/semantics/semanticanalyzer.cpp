@@ -175,27 +175,22 @@ void SemanticAnalyzer::analyzeBlockStmt(const BlockStmt* block)
 
 void SemanticAnalyzer::analyzeAssignment(const AssignmentStmt* s) 
 {
-    // risultato dell'espressione di assegnazione, valore che si sta assegnando
+    ExprAnalysisResult targetResult = analyzeExpr(s->target.get());
     ExprAnalysisResult valueResult = analyzeExpr(s->value.get());
 
-    if(symbolExistsAnywhere(s->name))
+    if (!types::isAssignmentCompatible(targetResult.type, valueResult.type)) {
+        errorLog->addError("tipo incompatibile nell'assegnazione a " + s->target_name + "  " +
+                           "[confronto tra " + types::toString(targetResult.type) + " e " 
+                           + types::toString(valueResult.type) + "]");
+        return;
+    }
+
+    if(auto varExpr = dynamic_cast<const VariableExpr*>(s->target.get()))
     {
-        // Controllo di tipo nell'operatore di assegnazione 
-        Type varType = lookupSymbolInfo(s->name).type;
-
-        if (!types::isAssignmentCompatible(varType, valueResult.type)) {
-            errorLog->addError("tipo incompatibile nell'assegnazione a " + s->name + "  " +
-                               "[confronto tra " + types::toString(varType) + " e " 
-                               + types::toString(valueResult.type) + "]");
+        if(symbolExistsAnywhere(varExpr->name) && targetResult.isConst) {
+            errorLog->addError("forbidden assignment of const variable '" + varExpr->name + "'");
+            return;
         }
-
-        //controllo isconst
-        if(lookupSymbolInfo(s->name).isConst) {
-            errorLog->addError("forbidden assignment of const variable \'" + s->name + "\'");
-        }
-
-    } else {
-        errorLog->addError("variabile non dichiarata: " + s->name);
     }
 }
 
@@ -461,6 +456,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
         }
         ExprAnalysisResult result;
         result.type = lookupSymbolInfo(s->name).type;
+        result.isConst = lookupSymbolInfo(s->name).isConst;
         return result;
     }
 

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cctype>
 #include <string>
+#include <climits>
 
 #include "keywords.h"
 #include "utils/ansi/ansi.h"
@@ -335,7 +336,13 @@ Token Lexer::scanNumber()
 
     // Numero integer
     token.type = TokenType::IntegerLiteral;
-    token.numericValue = std::stoi(number);
+    try {
+        token.numericValue = std::stoi(number);
+    } 
+    catch (std::out_of_range) {
+        errorLog->addError("numeric value specified exceed range limits (num:" + number + ") " +
+                        "(limit: " + std::to_string(INT_MAX) + ")", currentTextPos);
+    }
     token.lexeme = number;
 
     return token;

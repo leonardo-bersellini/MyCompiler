@@ -39,7 +39,7 @@ private:
     Type parseArrayType(); 
 
     std::unique_ptr<Stmt> parseScopeStmt();
-    std::unique_ptr<Stmt> parseAssignStmt();
+    std::unique_ptr<Stmt> parseAssignStmt(std::unique_ptr<Expr> target);
     std::unique_ptr<Stmt> parseDeclarationStmt(bool isConstDeclaration = false);
     std::unique_ptr<Stmt> parseFunctionStmt();
     std::unique_ptr<Stmt> parseReturnStmt();

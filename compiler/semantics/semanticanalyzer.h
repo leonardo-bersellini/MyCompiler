@@ -11,8 +11,9 @@
 // struttura di ritorno dell'analisi delle espressioni, racchiude i dati di analisi
 struct ExprAnalysisResult {
     ExprAnalysisResult() = default;
-    ExprAnalysisResult(const Type& t) : type(t) {}
+    ExprAnalysisResult(const Type& t, const bool c = false) : type(t), isConst(c) {}
     Type type;
+    bool isConst;
 };
 
 class SemanticAnalyzer

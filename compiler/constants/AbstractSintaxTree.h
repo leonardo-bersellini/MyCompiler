@@ -18,32 +18,40 @@
 class Expr {
 public:
     virtual ~Expr() = default;
+    // lvalue indica un valore al quale si può assegnare un altro valore (rvalue)
+    virtual bool isLValue() const =0;
 };
 
 class NumberExpr : public Expr {
 public:
     double value;
     bool isInteger; //distinzione double-int
+
+    bool isLValue() const override { return false; }
 };
 
 class StringExpr : public Expr {
 public:
     std::string value;
+    bool isLValue() const override { return false; }
 };
 
 class CharExpr : public Expr {
 public:
     char value;
+    bool isLValue() const override { return false; }
 };
 
 class BooleanExpr : public Expr {
 public:
     bool value;
+    bool isLValue() const override { return false; }
 };
 
 class VariableExpr : public Expr {
 public:
     std::string name;
+    bool isLValue() const override { return true; }
 };
 
 class BinaryExpr : public Expr {
@@ -51,18 +59,24 @@ public:
     TokenType op;
     std::unique_ptr<Expr> left;
     std::unique_ptr<Expr> right;
+
+    bool isLValue() const override { return false; }
 };
 
 class UnaryExpr : public Expr {
 public:
     TokenType op;
     std::unique_ptr<Expr> operand;
+
+    bool isLValue() const override { return false; }
 };
 
 class CallExpr : public Expr { //chiamata ad una funzione
 public:
     std::string name;
     std::vector<std::unique_ptr<Expr>> args;
+
+    bool isLValue() const override { return false; }
 };
 
 //array letterale := [value, value, value]
@@ -70,11 +84,14 @@ class LiteralArrayExpr : public Expr {
 public:
     mutable ArrayType type;
     std::vector<std::unique_ptr<Expr>> elements;
+
+    bool isLValue() const override { return false; }
 };
 
 class ErrorExpr : public Expr {
 public:
     //void, expression placeholder
+    bool isLValue() const override { return false; }
 };
 
 // Statements - esecuzione di azioni
@@ -86,7 +103,8 @@ public:
 
 class AssignmentStmt : public Stmt {
 public:
-    std::string name;
+    std::string target_name; //nome letterale del target
+    std::unique_ptr<Expr> target;  //target = value
     std::unique_ptr<Expr> value;
 };
 
@@ -255,7 +273,7 @@ inline void printStmt(const Stmt* stmt, int depth = 0)
 
     if (auto s = dynamic_cast<const AssignmentStmt*>(stmt)) {
 
-        std::cout << indent << "AssignmentStmt:" << s->name << std::endl;
+        std::cout << indent << "AssignmentStmt:" << s->target_name << std::endl;
         printAST(s->value.get(), depth + 1);
     }
 

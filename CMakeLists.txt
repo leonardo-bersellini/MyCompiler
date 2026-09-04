@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(MyCompiler 
-    VERSION 1.7.6
+    VERSION 1.7.8
     LANGUAGES CXX
     DESCRIPTION "Bismuth: compilatore sviluppato in C++ e LLVM"
 )
@@ -52,7 +52,6 @@ add_executable(Bismuth
   compiler/utils/visitor/template_visitor.h
 
 )
-target_link_libraries(Bismuth PRIVATE ${LLVM_LIBS})
 
 # COMPILE DEFINITIONS AND MACROS
 

@@ -358,6 +358,21 @@ llvm::Value* CodeGenerator::castValue(llvm::Value *value, PrimitiveType from, Pr
 }
 
 /*
+ * Funzione di utility della codegeneration, permette di risalire all'indirizzo di alloca
+ * di una variabile (considerata lvalue).
+ * Risponde alla necessità di risalire all'indirizzo delle variabili su cui salvare un valore.
+ */
+
+llvm::Value* CodeGenerator::generateLvalueAddress(const Expr* target)
+{
+    if (auto varExpr = dynamic_cast<const VariableExpr*>(target)) {
+        return lookupSymbol(varExpr->name); // ritorna direttamente l'AllocaInst*
+    }
+
+    throw std::runtime_error("codegen internal error: unsupported lvalue expression");
+}
+
+/*
  * Funzione di utility per array, permette di racchiudere la logica di copia degli elementi da 
  * un array ad un altro.
  */
@@ -508,7 +523,7 @@ void CodeGenerator::generateScopeStmt(const BlockStmt *st)
 
 void CodeGenerator::generateAssignStmt(const AssignmentStmt *st)
 {
-    auto symbol = lookupSymbol(st->name);
+    auto symbol = llvm::cast<llvm::AllocaInst>(generateLvalueAddress(st->target.get()));
     Type symbolType = getType(symbol->getAllocatedType());
 
     if(symbolType.isArray()) 
