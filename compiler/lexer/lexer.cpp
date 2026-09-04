@@ -30,7 +30,6 @@ std::vector<Token> Lexer::analiseString(const std::string &string, ErrorLog &_er
     currentTextPos.line = 0;
 
     buffer = removeAll(buffer, "\r");
-    buffer = removeAll(buffer, "\t");
 
     while(!isAtEnd())
     {
@@ -40,6 +39,9 @@ std::vector<Token> Lexer::analiseString(const std::string &string, ErrorLog &_er
             advance();
         }
         else if(c == '\n') {
+            advance();
+        }
+        else if(c == '\t') {
             advance();
         }
         else if(isDigit(c))

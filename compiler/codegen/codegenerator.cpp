@@ -365,8 +365,25 @@ llvm::Value* CodeGenerator::castValue(llvm::Value *value, PrimitiveType from, Pr
 
 llvm::Value* CodeGenerator::generateLvalueAddress(const Expr* target)
 {
-    if (auto varExpr = dynamic_cast<const VariableExpr*>(target)) {
+    if(auto varExpr = dynamic_cast<const VariableExpr*>(target)) {
         return lookupSymbol(varExpr->name); // ritorna direttamente l'AllocaInst*
+    }
+
+    if(auto arrAccess = dynamic_cast<const ArrayAccessExpr*>(target)) 
+    {
+        // indirizzo dell'array
+        auto arr = generateLvalueAddress(arrAccess->base.get());
+        // valore scalare di index
+        auto index = generateExpr(arrAccess->index.get()).llvm_value;
+
+        auto type = llvm::cast<llvm::AllocaInst>(arr)->getAllocatedType();
+
+        std::vector<llvm::Value*> idx = {
+            llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), 0),
+            index
+        };
+
+        return Builder.CreateGEP(type, arr, idx, "arr.elem.addr");
     }
 
     throw std::runtime_error("codegen internal error: unsupported lvalue expression");
@@ -932,6 +949,20 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
             Builder.CreateLoad(val->getAllocatedType(), val, s->name), 
             type,
         };
+    }
+
+    // Array Access Expr
+    else if(auto s = dynamic_cast<const ArrayAccessExpr*>(expr))
+    {
+        llvm::Value* baseAddr = generateLvalueAddress(s->base.get());
+        llvm::AllocaInst* baseAlloc = llvm::cast<llvm::AllocaInst>(baseAddr);
+        llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(baseAlloc->getAllocatedType());
+        llvm::Type* llvmTy = arrType->getElementType();
+
+        //indirizzo del singolo elemento generato dall'accesso (indirizzo di arr[i])
+        llvm::Value* addr = generateLvalueAddress(s); 
+
+        return ExprGenResult{Builder.CreateLoad(llvmTy, addr), Type(getType(llvmTy))};
     }
 
     // Array Literal Expression

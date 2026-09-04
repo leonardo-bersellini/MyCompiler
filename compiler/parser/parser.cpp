@@ -435,9 +435,14 @@ std::unique_ptr<Stmt> Parser::parseFunctionStmt()
             isConst = true;
         }
 
-        Type paramType = Type{types::toPrimitiveType(advance().lexeme)}; // consuma tipo parametro
-        std::string paramName = advance().lexeme;                 // consuma nome parametro
+        Type paramType;
+        if(peek(1).type == TokenType::LBracket) {
+            paramType = parseArrayType();
+        } else {
+            paramType = Type{types::toPrimitiveType(advance().lexeme)}; // consuma tipo parametro
+        } 
 
+        std::string paramName = advance().lexeme;   // consuma nome parametro 
         params.push_back(FunctionParam(paramType, paramName, isConst));
 
         if(check(TokenType::Comma))
@@ -981,6 +986,22 @@ std::unique_ptr<Expr> Parser::parseFactor()
 
         call->args = std::move(args);
         return call;
+    }
+
+    // Accesso a indice di un array
+    else if(check(TokenType::Identifier) && peek(1).type == TokenType::LBracket)
+    {
+        auto base = std::make_unique<VariableExpr>();
+        base->name = advance().lexeme; //identifier
+        
+        expect(TokenType::LBracket, true);
+        auto index = parseExpr();
+        expect(TokenType::RBracket, true);
+
+        auto arrAccess = std::make_unique<ArrayAccessExpr>();
+        arrAccess->base = std::move(base);
+        arrAccess->index = std::move(index);
+        return arrAccess;
     }
 
     // Variabile 

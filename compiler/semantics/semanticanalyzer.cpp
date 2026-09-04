@@ -460,6 +460,30 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
         return result;
     }
 
+    //Array access Expression
+    else if(auto s = dynamic_cast<const ArrayAccessExpr*>(expr))
+    {
+        auto baseResult = analyzeExpr(s->base.get());
+        auto indexResult = analyzeExpr(s->index.get());
+
+        if(baseResult.type.isError()) {
+            return ExprAnalysisResult{Type(PrimitiveType::Error)};
+        }
+
+        if(!baseResult.type.isArray()) {
+            errorLog->addError("indexing a non-array type (" + types::toString(baseResult.type) + ")");
+            return ExprAnalysisResult{Type(PrimitiveType::Error)};
+        }
+
+        if(!indexResult.type.is(PrimitiveType::Int)) {
+            errorLog->addError("array index must be of type integer");
+        }
+
+        PrimitiveType elementType = std::get<ArrayType>(baseResult.type.category).elementType;
+
+        return ExprAnalysisResult(Type(elementType), baseResult.isConst);
+    }
+
     //Array literal Expression
     else if(auto s = dynamic_cast<const LiteralArrayExpr*>(expr))
     {

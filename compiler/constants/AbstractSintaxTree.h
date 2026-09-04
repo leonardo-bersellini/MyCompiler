@@ -79,13 +79,21 @@ public:
     bool isLValue() const override { return false; }
 };
 
-//array letterale := [value, value, value]
+//array letterale := [value, value, value, ...]
 class LiteralArrayExpr : public Expr {
 public:
     mutable ArrayType type;
     std::vector<std::unique_ptr<Expr>> elements;
 
     bool isLValue() const override { return false; }
+};
+
+class ArrayAccessExpr : public Expr {
+public:
+    std::unique_ptr<Expr> base; //array al quale si sta accedendo
+    std::unique_ptr<Expr> index;
+
+    bool isLValue() const override { return true; }
 };
 
 class ErrorExpr : public Expr {
