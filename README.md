@@ -6,7 +6,7 @@ Bismuth is a standalone compiler written in C++, using LLVM as its backend, deve
 
 **Work in Progress**
 
-Go to the "Quick Start" section to try the compiler, or read the code and let us know what you think ;)
+Go to the "Quick Start" section to try the compiler, or read the code and let me know what you think ;)
 
 ---
 
@@ -49,12 +49,14 @@ The project is continuously evolving, becoming progressively more complete and r
 - `switch`
 - `const`, const declarations and parameters
 - Function declaration, `return`
+- `arrays`, complex types and static arrays
 
 **Supported expressions**
 - Arithmetic, comparison, and logical operators
-- Literals (int, double, string, char, bool)
+- Literals (int, double, string, char, bool and arrays)
 - Variables and function calls
 - Parenthesized expressions
+- Access to an array element
 
 ---
 
@@ -63,7 +65,7 @@ The project is continuously evolving, becoming progressively more complete and r
 **To use the compiler** (pre-built release)
 
 - No particular requirements — the release package includes the required linker and runtime libraries
-- Windows 64-bit
+- Windows 64-bit is the only supported os
 
 **To build from source / contribute**
 - LLVM 18.1.8
@@ -97,9 +99,6 @@ Then follow those steps:
 git clone https://github.com/leonardo-bersellini/MyCompiler 
 cd mycompiler
 
-# if you downloaded the zip 
-cd bismuth-vx.x.x-win64 
-
 # then build with cmake
 cmake -S . -B build -DLLVM_DIR="/path/to/llvm-install/lib/cmake/llvm"
 cmake --build build
@@ -118,6 +117,34 @@ cmake --build build
 | `-e <file>` | Compiles, links and produces an exe file (`.exe`) |
 | `--llvm-ir` | Prints the generated LLVM IR to stdout |
 | `--verbose` | Shows detailed information during execution |
+| `--no-generation` | Compiles but does not generate any output file |
+| `--hide-warnings` | Hide collected warnings |
+
+---
+
+## Testing
+
+The project includes a test suite based on [Catch2](https://github.com/catchorg/Catch2) (v3), 
+covering the Lexer, Parser, and other compiler components.
+
+Tests are enabled by default in **Debug** builds and disabled in **Release**, so that building 
+just the final executable doesn't require fetching/compiling Catch2.
+
+The tests executable will be found in the bin directory with the other compiled files and can be launched using the Catch2 flags. (es: *bismuth_tests -r console -s*, which will print all stout of the tests in the console mode).
+
+### Build and run
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DLLVM_DIR="/path/to/llvm-install/lib/cmake/llvm"
+cmake --build build
+ctest --test-dir build
+```
+
+To enable/disable tests explicitly, regardless of build type:
+
+```bash
+cmake -B build -DBUILD_TESTING=ON   # or OFF
+```
 
 ---
 
@@ -133,6 +160,9 @@ compiler/
 ├── lexer/
 ├── parser/
 └── semantics/
+
+tests/
+└── test_***.cpp
 
 third-party/
 ├── mingw/
@@ -172,7 +202,7 @@ If you use, modify, or distribute Bismuth or a derivative work, please preserve 
 
 For example:
 
-> This project is based on Bismuth Compiler by Leonardo Bersellini.
+> This project is based on Bismuth Compiler by Leonardo Bersellini.  
 > Original project: https://github.com/leonardo-bersellini/MyCompiler
 
 This attribution is requested to preserve the connection with the original Bismuth project and is in addition to the requirements of the MIT License.
@@ -185,6 +215,7 @@ Bismuth uses third-party software, including:
 
 - **LLVM** — Apache License 2.0 with LLVM Exceptions
 - **MSYS2** — packages are distributed under their respective licenses
+- **Catch2** — Boost Software License 1.0
 
 Third-party software remains subject to its own license terms.
 
