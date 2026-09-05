@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(MyCompiler 
-    VERSION 1.8.1
+    VERSION 1.8.2
     LANGUAGES CXX
     DESCRIPTION "Bismuth: compilatore sviluppato in C++ e LLVM"
 )
@@ -33,11 +33,9 @@ find_package(LLVM REQUIRED CONFIG)
 
 # NOME DEL COMPILER : BISMUTH_COMPILER
 
-# SOURCES
+# BISMUTH SOURCE LIBRARY
 
-add_executable(Bismuth
-  main.cpp
-  .gitignore
+add_library(BismuthCore STATIC
 
   compiler/codegen/codegenerator.cpp compiler/codegen/codegenerator.h
   compiler/constants/AbstractSintaxTree.h compiler/constants/keywords.h compiler/constants/symbols.h compiler/constants/token.h compiler/constants/types.h
@@ -53,33 +51,19 @@ add_executable(Bismuth
 
 )
 
-# COMPILE DEFINITIONS AND MACROS
-
-target_compile_definitions(Bismuth PRIVATE
-    $<$<CONFIG:Debug>:DEBUG_MACRO>
-    $<$<CONFIG:Release>:RELEASE_MACRO>
-)
-
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(EXE_SUFFIX "")
-else()
-    set(EXE_SUFFIX "_${CMAKE_BUILD_TYPE}")
-endif()
-
-set_target_properties(Bismuth PROPERTIES OUTPUT_NAME "Bismuth${EXE_SUFFIX}")
 
 # INCLUDE DIRECTORIES
 
-target_include_directories(Bismuth PRIVATE
+target_include_directories(BismuthCore PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/compiler
   ${CMAKE_CURRENT_SOURCE_DIR}/compiler/constants
-  ${CMAKE_CURRENT_SOURCE_DIR}/compiler
 )
 
-target_include_directories(Bismuth PRIVATE ${CMAKE_BINARY_DIR}/generated)
+target_include_directories(BismuthCore PUBLIC ${CMAKE_BINARY_DIR}/generated)
 
-target_include_directories(Bismuth PRIVATE ${LLVM_INCLUDE_DIRS})
-target_compile_definitions(Bismuth PRIVATE ${LLVM_DEFINITIONS})
+target_include_directories(BismuthCore PUBLIC ${LLVM_INCLUDE_DIRS})
+target_compile_definitions(BismuthCore PUBLIC ${LLVM_DEFINITIONS})
+
 
 # INCLUDE LLVM COMPONENTS
 
@@ -96,7 +80,48 @@ llvm_map_components_to_libnames(LLVM_LIBS
     X86AsmParser
 )
 
-target_link_libraries(Bismuth PRIVATE ${LLVM_LIBS})
+target_link_libraries(BismuthCore PUBLIC ${LLVM_LIBS})
+
+
+# BISMUTH COMPILER EXECUTABLE
+
+add_executable(Bismuth 
+  main.cpp
+)
+
+target_link_libraries(Bismuth PRIVATE BismuthCore)
+
+
+# BISMUTH TESTING
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(TEST_MODE ON)
+else()
+    set(TEST_MODE OFF)
+endif()
+
+option(BUILD_TESTING "Build tests" ${TEST_MODE})
+
+if(BUILD_TESTING)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+
+# COMPILE DEFINITIONS AND MACROS
+
+target_compile_definitions(Bismuth PRIVATE
+    $<$<CONFIG:Debug>:DEBUG_MACRO>
+    $<$<CONFIG:Release>:RELEASE_MACRO>
+)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(EXE_SUFFIX "")
+else()
+    set(EXE_SUFFIX "_${CMAKE_BUILD_TYPE}")
+endif()
+
+set_target_properties(Bismuth PROPERTIES OUTPUT_NAME "Bismuth${EXE_SUFFIX}")
 
 
 # POST-BUILD CONFIGURATION (THIRD-PARTY DLLS)
