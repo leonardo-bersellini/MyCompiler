@@ -270,6 +270,8 @@ llvm::Type* CodeGenerator::getLLVMType(const Type &type)
                     break;
                 case PrimitiveType::Char : return llvm::Type::getInt8Ty(Context);
                     break;
+                case PrimitiveType::Void : return llvm::Type::getVoidTy(Context);
+                    break;
                 default : return nullptr;
                     break;
             }

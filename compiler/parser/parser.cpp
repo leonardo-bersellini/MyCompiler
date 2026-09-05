@@ -104,6 +104,11 @@ std::unique_ptr<Stmt> Parser::parseStatement()
         // Nuovo Scope
         return parseScopeStmt();
     }
+    else if(check(TokenType::VoidKeyword))
+    {
+        // void -> solo come tipo di funzione
+        return parseFunctionStmt();
+    }
     else if(check(TokenType::TypeKeyword))
     {
         //Dichiarazione (anche Array) o Funzione
@@ -440,6 +445,10 @@ std::unique_ptr<Stmt> Parser::parseFunctionStmt()
             paramType = parseArrayType();
         } else {
             paramType = Type{types::toPrimitiveType(advance().lexeme)}; // consuma tipo parametro
+
+            if(paramType.is(PrimitiveType::Void)) {
+                errorLog->addError("function parameter cannot be of type void", peek().position);
+            }
         } 
 
         std::string paramName = advance().lexeme;   // consuma nome parametro 
