@@ -923,9 +923,21 @@ std::unique_ptr<Expr> Parser::parseFactor()
     {
         std::string lexeme = advance().lexeme;
 
-        auto strExpr = std::make_unique<StringExpr>();
-        strExpr->value = lexeme;
-        return strExpr;
+        if(lexeme.empty()) {
+            errorLog->addError("could not convert \"\" (empty char list) to an array of type char[]", peek().position);
+            return std::make_unique<ErrorExpr>();
+        }
+
+        auto arrStr = std::make_unique<LiteralArrayExpr>();
+        arrStr->type = ArrayType(PrimitiveType::Char, lexeme.size());
+        
+        for(const char c : lexeme) {
+            auto charExpr = std::make_unique<CharExpr>();
+            charExpr->value = c;
+            arrStr->elements.push_back(std::move(charExpr));
+        }
+
+        return arrStr;
     }
 
     // Char letterali

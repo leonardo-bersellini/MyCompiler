@@ -26,7 +26,6 @@ enum class PrimitiveType {
     Double, 
     Char,
     Bool,
-    String,
     Void,
     Error
 };
@@ -86,7 +85,6 @@ public:
 namespace types
 {
     inline bool isNumeric(PrimitiveType t);
-    inline bool isTextual(PrimitiveType t);
     inline bool isAssignmentCompatible(Type destination, Type source);
     inline bool isEqualityComparable(PrimitiveType left, PrimitiveType right);
     inline bool isRelationalComparable(PrimitiveType left, PrimitiveType right);
@@ -110,14 +108,6 @@ namespace types
 
 inline bool types::isNumeric(PrimitiveType t) {
     return t == PrimitiveType::Int || t == PrimitiveType::Double;
-}
-
-/*
- * Ritorna true se il valore è considerato testuale
- */
-
-inline bool types::isTextual(PrimitiveType t) {
-    return t == PrimitiveType::Char || t == PrimitiveType::String;
 }
 
 /*
@@ -201,19 +191,8 @@ inline PrimitiveType types::additionResultType(PrimitiveType left, PrimitiveType
     }
 
     // Caso testuale
-    bool leftTextual = isTextual(left);
-    bool rightTextual = isTextual(right);
-
-    if(leftTextual || rightTextual)
-    {
-        // 'a' + 'b' = "ab";
-        if(left == PrimitiveType::Char && right == PrimitiveType::Char)
-            return PrimitiveType::String;
-
-        // Almeno uno dei due è una stringa -> concatenazione
-        if((left == PrimitiveType::String && rightTextual) || (right == PrimitiveType::String && leftTextual))
-            return PrimitiveType::String;
-    }
+    if(left == PrimitiveType::Char && right == PrimitiveType::Char) 
+        return PrimitiveType::Char;
 
     return PrimitiveType::Error;
 }
@@ -336,7 +315,6 @@ inline std::string types::toString(const Type& type) {
                 case PrimitiveType::Double: return "double";
                 case PrimitiveType::Char:   return "char";
                 case PrimitiveType::Bool:   return "bool";
-                case PrimitiveType::String:  return "string";
                 case PrimitiveType::Void:    return "void";
                 case PrimitiveType::Error:   return "error";
             }
@@ -353,7 +331,6 @@ inline std::string types::toString(const Type& type) {
 inline PrimitiveType types::toPrimitiveType(const std::string& typeName) {
     if (typeName == "int")    return PrimitiveType::Int;
     if (typeName == "double") return PrimitiveType::Double;
-    if (typeName == "string") return PrimitiveType::String;
     if (typeName == "char")   return PrimitiveType::Char;
     if (typeName == "bool")   return PrimitiveType::Bool;
     if( typeName == "void")   return PrimitiveType::Void;

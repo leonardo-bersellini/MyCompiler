@@ -92,3 +92,6 @@ CMakeLists.txt.user*
 
 # Ignored packages releases (added to github releases)
 /releases*/
+
+# Ignore automation scripts
+/_scripts_*/

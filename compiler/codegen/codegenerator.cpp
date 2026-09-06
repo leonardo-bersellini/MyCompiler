@@ -912,12 +912,6 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
             };
     }
 
-    // String Expression
-    else if(auto s = dynamic_cast<const StringExpr*>(expr))
-    {
-        // TODO In getLLVMType
-    }
-
     // Char Expression
     else if(auto s = dynamic_cast<const CharExpr*>(expr))
     {

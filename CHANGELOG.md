@@ -22,9 +22,19 @@ each written as `field_name:` followed by its value.
 
  ---
 
+ **V 1.8.4** &ensp; <@leonardo-bersellini> &emsp; 06 . 09 . 2026
+
+ `commit:` Removed Strings *-o- ()*
+ <br>
+ `scope:` Types, Semantics
+ <br>
+ `features:` removed strings as a type
+
+ ---
+
  **V 1.8.3**  &ensp; <@leonardo-bersellini> &emsp; 05 . 09 . 2026
 
- `commit:` Added Changelog *-o- ()*
+ `commit:` Added Changelog *-o- (5db025f)*
  <br>
  `scope:` All
  <br>

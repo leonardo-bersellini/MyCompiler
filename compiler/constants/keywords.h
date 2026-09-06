@@ -9,7 +9,6 @@ inline const std::unordered_map<std::string, TokenType> keywords = {
     {"int", TokenType::TypeKeyword},
     {"double", TokenType::TypeKeyword},
     {"char", TokenType::TypeKeyword},
-    // {"string", TokenType::TypeKeyword}, // disabilitato nel codegen
     {"bool", TokenType::TypeKeyword},
     {"true", TokenType::BoolLiteral},
     {"false", TokenType::BoolLiteral},

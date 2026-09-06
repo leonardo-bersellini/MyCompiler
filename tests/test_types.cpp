@@ -11,24 +11,11 @@ TEST_CASE("isNumeric e isTextual classificano correttamente i tipi primitivi", "
         REQUIRE(types::isNumeric(PrimitiveType::Double));
     }
 
-    SECTION("Char, Bool, String, Void non sono numerici")
+    SECTION("Char, Bool, Void non sono numerici")
     {
         REQUIRE_FALSE(types::isNumeric(PrimitiveType::Char));
         REQUIRE_FALSE(types::isNumeric(PrimitiveType::Bool));
-        REQUIRE_FALSE(types::isNumeric(PrimitiveType::String));
         REQUIRE_FALSE(types::isNumeric(PrimitiveType::Void));
-    }
-
-    SECTION("Char e String sono testuali")
-    {
-        REQUIRE(types::isTextual(PrimitiveType::Char));
-        REQUIRE(types::isTextual(PrimitiveType::String));
-    }
-
-    SECTION("Int e Bool non sono testuali")
-    {
-        REQUIRE_FALSE(types::isTextual(PrimitiveType::Int));
-        REQUIRE_FALSE(types::isTextual(PrimitiveType::Bool));
     }
 }
 
@@ -53,7 +40,7 @@ TEST_CASE("isAssignmentCompatible su tipi primitivi", "[types]")
     SECTION("tipi incompatibili vengono rifiutati")
     {
         REQUIRE_FALSE(types::isAssignmentCompatible(Type{PrimitiveType::Int}, Type{PrimitiveType::Bool}));
-        REQUIRE_FALSE(types::isAssignmentCompatible(Type{PrimitiveType::String}, Type{PrimitiveType::Int}));
+        REQUIRE_FALSE(types::isAssignmentCompatible(Type{PrimitiveType::Char}, Type{PrimitiveType::Int}));
     }
 
     SECTION("un Error da un lato è sempre compatibile (errore già segnalato altrove)")
@@ -103,16 +90,6 @@ TEST_CASE("additionResultType gestisce numerico e testuale", "[types]")
         REQUIRE(types::additionResultType(PrimitiveType::Int, PrimitiveType::Double) == PrimitiveType::Double);
     }
 
-    SECTION("Char + Char = String")
-    {
-        REQUIRE(types::additionResultType(PrimitiveType::Char, PrimitiveType::Char) == PrimitiveType::String);
-    }
-
-    SECTION("String + Char = String")
-    {
-        REQUIRE(types::additionResultType(PrimitiveType::String, PrimitiveType::Char) == PrimitiveType::String);
-    }
-
     SECTION("Bool + Bool = Error (non numerico, non testuale)")
     {
         REQUIRE(types::additionResultType(PrimitiveType::Bool, PrimitiveType::Bool) == PrimitiveType::Error);
@@ -146,7 +123,7 @@ TEST_CASE("binaryResultType instrada l'operatore verso la regola corretta", "[ty
 
     SECTION("< tra tipi non confrontabili -> Error")
     {
-        REQUIRE(types::binaryResultType(TokenType::Less, PrimitiveType::Bool, PrimitiveType::String) == PrimitiveType::Error);
+        REQUIRE(types::binaryResultType(TokenType::Less, PrimitiveType::Bool, PrimitiveType::Char) == PrimitiveType::Error);
     }
 
     SECTION("&& tra Bool -> Bool")
@@ -185,11 +162,6 @@ TEST_CASE("unaryResultType", "[types]")
     SECTION("- su Double -> Double (tipo invariato)")
     {
         REQUIRE(types::unaryResultType(TokenType::Minus, PrimitiveType::Double) == PrimitiveType::Double);
-    }
-
-    SECTION("- su String -> Error")
-    {
-        REQUIRE(types::unaryResultType(TokenType::Minus, PrimitiveType::String) == PrimitiveType::Error);
     }
 }
 

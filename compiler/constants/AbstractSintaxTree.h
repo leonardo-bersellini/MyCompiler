@@ -30,12 +30,6 @@ public:
     bool isLValue() const override { return false; }
 };
 
-class StringExpr : public Expr {
-public:
-    std::string value;
-    bool isLValue() const override { return false; }
-};
-
 class CharExpr : public Expr {
 public:
     char value;
@@ -232,9 +226,6 @@ inline void printAST(const Expr* node, int depth = 0) {
 
     if (auto n = dynamic_cast<const NumberExpr*>(node)) {
         std::cout << indent << "NumberExpr:" << n->value << std::endl;
-    }
-    else if (auto n = dynamic_cast<const StringExpr*>(node)) {
-        std::cout << indent << "StringExpr:" << "\"" + n->value + "\"" << std::endl;
     }
     else if (auto n = dynamic_cast<const CharExpr*>(node)) {
         std::cout << indent << "CharExpr:" << n->value << std::endl;

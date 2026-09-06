@@ -423,14 +423,6 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
         return result;
     }
 
-    // String Expression
-    else if(auto s = dynamic_cast<const StringExpr*>(expr))
-    {
-        ExprAnalysisResult result;
-        result.type = Type(PrimitiveType::String);
-        return result;
-    }
-
     // Char Expression
     else if(auto s = dynamic_cast<const CharExpr*>(expr))
     {
