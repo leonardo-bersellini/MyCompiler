@@ -23,9 +23,9 @@ void SemanticAnalyzer::analyzeProgram(const Program &program, ErrorLog &errorLog
     this->currentFunction = nullptr;
     this->loopDepth = 0;
 
-    this->scopeStack.push_back(std::unordered_map<std::string, SymbolInfo>()); //scope globale
+    this->scopeStack.push(); //scope globale
 
-    //flaga di controllo
+    //flag di controllo
     bool winmain_found = false;
     bool valid = true;
 
@@ -164,13 +164,13 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
 
 void SemanticAnalyzer::analyzeBlockStmt(const BlockStmt* block) 
 {
-    pushScope(); //crea un nuovo scope
+    scopeStack.push(); //crea un nuovo scope
 
     for(const auto& st : block->statements) {
         analyzeStmt(st.get());
     }
 
-    popScope(); //chiude lo scope corrente
+    scopeStack.pop(); //chiude lo scope corrente
 }
 
 void SemanticAnalyzer::analyzeAssignment(const AssignmentStmt* s) 
@@ -187,7 +187,7 @@ void SemanticAnalyzer::analyzeAssignment(const AssignmentStmt* s)
 
     if(auto varExpr = dynamic_cast<const VariableExpr*>(s->target.get()))
     {
-        if(symbolExistsAnywhere(varExpr->name) && targetResult.isConst) {
+        if(scopeStack.symbolExistsAnywhere(varExpr->name) && targetResult.isConst) {
             errorLog->addError("forbidden assignment of const variable '" + varExpr->name + "'");
             return;
         }
@@ -203,7 +203,7 @@ void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
 
     if(s->isConst && !s->initializer) {
         errorLog->addError("could not declare a const variable without initialization");
-        declareSymbol(s->name, SymbolInfo(s->type, false)); // dichiarato ma non const, per evitare errori a cascata
+        scopeStack.declareSymbol(s->name, SymbolInfo(s->type, false)); // dichiarato ma non const, per evitare errori a cascata
         return;
     }
 
@@ -219,10 +219,10 @@ void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
         }
     }
 
-    if(symbolExistsInCurrentScope(s->name)) {
+    if(scopeStack.symbolExistsInCurrentScope(s->name)) {
         errorLog->addError("redeclaration of variable: " + s->name);
     } else {
-        declareSymbol(s->name, SymbolInfo(s->type, s->isConst));
+        scopeStack.declareSymbol(s->name, SymbolInfo(s->type, s->isConst));
     }
 }
 
@@ -244,11 +244,11 @@ void SemanticAnalyzer::analyseFunction(const FunctionStmt* s)
     functionTable.insert({s->name, FunctionInfo{s->returnType, paramsType}});
 
     //scope locale alla funzione
-    pushScope();
+    scopeStack.push();
 
     // dichiarazione dei parametri come variabili nello scope
     for(const FunctionParam& p : s->params) {
-        declareSymbol(p.name, SymbolInfo(p.type, p.isConst));
+        scopeStack.declareSymbol(p.name, SymbolInfo(p.type, p.isConst));
     }
 
     currentFunction = &functionTable[s->name];
@@ -260,7 +260,7 @@ void SemanticAnalyzer::analyseFunction(const FunctionStmt* s)
 
     analyzeStmt(s->body.get());
 
-    popScope();
+    scopeStack.pop();
 
     currentFunction = nullptr;
 }
@@ -311,7 +311,7 @@ void SemanticAnalyzer::analyzeIf(const IfStmt* s)
 
 void SemanticAnalyzer::analyzeFor(const ForStmt* s)
 {
-    pushScope(); // scope che racchiude init, condition, update, body
+    scopeStack.push(); // scope che racchiude init, condition, update, body
 
     if(s->init) analyzeStmt(s->init.get());
     if(s->condition) {
@@ -326,7 +326,7 @@ void SemanticAnalyzer::analyzeFor(const ForStmt* s)
     analyzeStmt(s->body.get());
     loopDepth--;
 
-    popScope();
+    scopeStack.pop();
 }
 
 void SemanticAnalyzer::analyzeWhile(const WhileStmt* s)
@@ -442,13 +442,13 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     // Variable Expression
     else if(auto s = dynamic_cast<const VariableExpr*>(expr))
     {
-        if(!symbolExistsAnywhere(s->name)) {
+        if(!scopeStack.symbolExistsAnywhere(s->name)) {
             errorLog->addError("variable not defined. variable name: " + s->name);
             return ExprAnalysisResult(Type(PrimitiveType::Error));
         }
         ExprAnalysisResult result;
-        result.type = lookupSymbolInfo(s->name).type;
-        result.isConst = lookupSymbolInfo(s->name).isConst;
+        result.type = scopeStack.lookupSymbol(s->name)->type;
+        result.isConst = scopeStack.lookupSymbol(s->name)->isConst;
         return result;
     }
 
@@ -589,74 +589,6 @@ ExprAnalysisResult SemanticAnalyzer::analyzeBinaryOperation(const BinaryExpr *ex
     return ExprAnalysisResult(Type(resultType));
 }
 
-/*
- * Funzione dello stackScope.
- * Controlla l'esistenza di un simbolo all'interno di tutto lo stack degli scope
- * presenti.
- */
-
-bool SemanticAnalyzer::symbolExistsAnywhere(const std::string &name) const {
-    for(int i= scopeStack.size() -1; i >= 0; i--) {
-        if(scopeStack[i].contains(name)) return true;
-    }
-    return false;
-}
-
-/*
- * Funzione dello stackScope.
- * Controlla l'esistenza di un simbolo solo nello scope corrente, che
- * corrisponde all'ultimo scope della lista.
- */
-
-bool SemanticAnalyzer::symbolExistsInCurrentScope(const std::string &name) const {
-    if(scopeStack.back().contains(name))
-        return true;
-    else
-        return false;
-}
-
-/*
- * Funzione dello stackScope.
- * Cerca il symbolo specificato in tutto lo stackscope, per poi restituire
- * le informazioni di quel simbolo.
- */
-
-SymbolInfo SemanticAnalyzer::lookupSymbolInfo(const std::string &name) const {
-    for(int i = scopeStack.size() - 1; i >= 0; i--) {
-        if (scopeStack[i].contains(name)) return scopeStack[i].at(name);
-    }
-    return SymbolInfo(Type(PrimitiveType::Error), false); // non trovato
-}
-
-/*
- * Funzione dello stackScope.
- * Permette di dichiarare un simbolo, inserendolo nello scope corrente, che
- * corrisponde all'ultimo della lista.
- */
-
-void SemanticAnalyzer::declareSymbol(const std::string &name, SymbolInfo info) {
-    scopeStack.back().insert({name, info});
-}
-
-/*
- * Funzione dello stackScope.
- * Esegue il push sullo stackscope, ovvero aggiunge un nuovo 
- * scope (std::unordered_map<std::string, SymbolInfo) all'interno della lista.
- * Lo scope aggiunto è una mappa vuota.
- */
-
-void SemanticAnalyzer::pushScope() {
-    scopeStack.push_back(std::unordered_map<std::string, SymbolInfo>());
-}
-
-/*
- * Funzione dello stackScope.
- * Simmetrico all'azione di push, esegue l'azione di pop, ovvero esce dallo scope attuale.
- */
-
-void SemanticAnalyzer::popScope() {
-    scopeStack.pop_back();
-}
 
 /*
  * Questa funzione controlla ricorsivamente che ogni percorso possibile di uno stmt

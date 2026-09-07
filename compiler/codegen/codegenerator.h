@@ -21,6 +21,8 @@
 
 #include "AbstractSintaxTree.h"
 
+#include "codegen_scopestack.h"
+
 // struttura di ritorno della generazione delle espressioni
 struct ExprGenResult {
     llvm::Value* llvm_value;
@@ -45,21 +47,13 @@ private:
     std::unique_ptr<llvm::Module> Module;                   // Contenitore del codice generato
 
     // stack di scopes per mantenere lo shadowing dei valori allocati
-    std::vector<std::unordered_map<std::string, llvm::AllocaInst*>> allocaScopeStack;
-
-    void declareSymbol(const std::string& name, llvm::AllocaInst* alloca);
-    llvm::AllocaInst* lookupSymbol(const std::string& name);
-
-    void pushScope();
-    void popScope();
-
-    bool isGlobalScope() const;
+    AllocaScopeStack scopeStack;
 
     llvm::Type* getLLVMType(const Type &type);
     Type getType(llvm::Type *type);
     llvm::Value* castValue(llvm::Value* value, PrimitiveType from, PrimitiveType to);
 
-    llvm::Value* generateLvalueAddress(const Expr* target);
+    llvm::Value* generateLValueAddress(const Expr* target);
 
     void copyArrayElements(llvm::Value* source, llvm::Value* destination, llvm::ArrayType* arrType, llvm::Type* elementType);
     void generateArrayAssignment(const LiteralArrayExpr* arrLit, llvm::Value* destination);
@@ -84,10 +78,6 @@ private:
 
     ExprGenResult generateBinaryExpr(const BinaryExpr* s);
     ExprGenResult generateUnaryExpr(const UnaryExpr* expr);
-
-
-    //llvm::AllocaInst* createEntryAlloca(llvm::Function* func, const std::string& name, llvm::Type* type);
-    //llvm::Value* promote(llvm::Value*, ValueType from, ValueType to);
 
 };
 

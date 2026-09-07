@@ -22,9 +22,19 @@ each written as `field_name:` followed by its value.
 
  ---
 
+ **V 1.8.5** &ensp; <@leonardo-bersellini> &emsp; 07 . 09 . 2026
+
+ `commit:` Stack templates *-o- ()*
+ <br>
+ `scope:` Utils, Codegen, Semantics
+ <br>
+ `features:` refactored stacks inside semanticAnalyzer and Codegen
+
+ ---
+
  **V 1.8.4** &ensp; <@leonardo-bersellini> &emsp; 06 . 09 . 2026
 
- `commit:` Removed Strings *-o- ()*
+ `commit:` Removed Strings *-o- (cef441d)*
  <br>
  `scope:` Types, Semantics
  <br>

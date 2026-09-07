@@ -8,6 +8,8 @@
 #include "AbstractSintaxTree.h"
 #include "errors/errorlog.h"
 
+#include "utils/stack/scope_stack.h"
+
 // struttura di ritorno dell'analisi delle espressioni, racchiude i dati di analisi
 struct ExprAnalysisResult {
     ExprAnalysisResult() = default;
@@ -24,10 +26,14 @@ public:
     void analyzeProgram(const Program& program, ErrorLog& errorLog);
 
 private:
-    std::vector<std::unordered_map<std::string, SymbolInfo>> scopeStack; // Permette una lista di scope diversi, insieme di tabelle dei simboli
+    // Permette una lista di scope diversi, insieme di tabelle dei simboli
+    scope_stack<std::string, SymbolInfo> scopeStack; 
 
-    std::unordered_map<std::string, FunctionInfo> functionTable;     // Tabella delle funzioni dichiarate
-    const FunctionInfo* currentFunction = nullptr; // Funzione corrente (se esiste)
+    // Tabella delle funzioni dichiarate
+    std::unordered_map<std::string, FunctionInfo> functionTable; 
+        
+    // Funzione corrente (se esiste)
+    const FunctionInfo* currentFunction = nullptr; 
 
     ErrorLog* errorLog;
 
@@ -51,13 +57,6 @@ private:
     ExprAnalysisResult analyzeExpr(const Expr* expr);
 
     ExprAnalysisResult analyzeBinaryOperation(const BinaryExpr* expr);
-
-    bool symbolExistsAnywhere(const std::string& name) const;
-    bool symbolExistsInCurrentScope(const std::string& name) const;
-    SymbolInfo lookupSymbolInfo(const std::string& name) const;
-    void declareSymbol(const std::string& name, SymbolInfo info);
-    void pushScope();
-    void popScope();
 
     bool allPathsReturn(const Stmt* stmt) const;
 };

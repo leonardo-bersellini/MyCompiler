@@ -192,64 +192,6 @@ bool CodeGenerator::link(const std::string &objFile, const std::string &outputEx
     return true;
 }
 
-/// -- STACK FUNCTIONS --- ///
-
-/*
- * Dichiara un simbolo nello scope corrente (l'ultimo elemento dello stack),
- * associandolo alla sua alloca llvm. Non verifica scope esterni per permettere shadowing.
- */
-
-void CodeGenerator::declareSymbol(const std::string& name, llvm::AllocaInst* alloca)
-{
-    allocaScopeStack.back()[name] = alloca;
-}
-
-/*
- * Cerca un simbolo per nome, scorrendo lo stack in ordine inverso: dallo scope più
- * interno (corrente) verso quello più esterno, per rispettare lo shadowing.
- * Se non trovato in nessun livello, il programma lancia un eccezione. Si tratta di un
- * bug interno del compiler, l'analisi semantica avrebbe dovuto bloccarlo.
- */
-
-llvm::AllocaInst* CodeGenerator::lookupSymbol(const std::string& name) 
-{
-    for (auto it = allocaScopeStack.rbegin(); it != allocaScopeStack.rend(); ++it)
-    {
-        auto found = it->find(name);
-        if (found != it->end()) {
-            return found->second;
-        }
-    }
-
-    throw std::runtime_error("codegen internal error: undeclared symbol '" + name + "'");
-    return nullptr;
-}
-
-/* 
- * Aggiunge un nuovo scope (una mappa vuota) in cima allo stack. 
- */
-
-void CodeGenerator::pushScope() {
-    allocaScopeStack.push_back(std::unordered_map<std::string, llvm::AllocaInst*>());
-}
-
-/*
- * Esce dallo scope corrente rimuovendo un livelo dallo stack 
- */
-
-void CodeGenerator::popScope() {
-    allocaScopeStack.pop_back();
-}
-
-/*
- * Questa funzione permette di controllare se lo scope corrente è quello globale.
- * Risulta utile per controlli come la distinzione tra declaration e global-declaration
- */
-
-bool CodeGenerator::isGlobalScope() const
-{
-    return allocaScopeStack.size() == 1;
-}
 
 /// --- UTILITIES --- ///
 
@@ -365,16 +307,16 @@ llvm::Value* CodeGenerator::castValue(llvm::Value *value, PrimitiveType from, Pr
  * Risponde alla necessità di risalire all'indirizzo delle variabili su cui salvare un valore.
  */
 
-llvm::Value* CodeGenerator::generateLvalueAddress(const Expr* target)
+llvm::Value* CodeGenerator::generateLValueAddress(const Expr* target)
 {
     if(auto varExpr = dynamic_cast<const VariableExpr*>(target)) {
-        return lookupSymbol(varExpr->name); // ritorna direttamente l'AllocaInst*
+        return scopeStack.lookupSymbol(varExpr->name).value(); // ritorna direttamente l'AllocaInst*
     }
 
     if(auto arrAccess = dynamic_cast<const ArrayAccessExpr*>(target)) 
     {
         // indirizzo dell'array
-        auto arr = generateLvalueAddress(arrAccess->base.get());
+        auto arr = generateLValueAddress(arrAccess->base.get());
         // valore scalare di index
         auto index = generateExpr(arrAccess->index.get()).llvm_value;
 
@@ -437,14 +379,14 @@ void CodeGenerator::generateArrayAssignment(const LiteralArrayExpr* arrLit, llvm
 
 void CodeGenerator::generate(const Program &program)
 {
-    pushScope(); //scope globale
+    scopeStack.push(); //scope globale
 
     for(const auto& st : program.statements)
     {
         generateStmt(st.get());
     }
 
-    popScope();
+    scopeStack.pop();
 }
 
 /*
@@ -527,7 +469,7 @@ void CodeGenerator::generateStmt(const Stmt *stmt)
 
 void CodeGenerator::generateScopeStmt(const BlockStmt *st)
 {
-    pushScope();
+    scopeStack.push();
 
     for(const auto& st : st->statements) {
         generateStmt(st.get());
@@ -537,12 +479,12 @@ void CodeGenerator::generateScopeStmt(const BlockStmt *st)
         }
     }
 
-    popScope();
+    scopeStack.pop();
 }
 
 void CodeGenerator::generateAssignStmt(const AssignmentStmt *st)
 {
-    auto symbol = llvm::cast<llvm::AllocaInst>(generateLvalueAddress(st->target.get()));
+    auto symbol = llvm::cast<llvm::AllocaInst>(generateLValueAddress(st->target.get()));
     Type symbolType = getType(symbol->getAllocatedType());
 
     if(symbolType.isArray()) 
@@ -552,7 +494,7 @@ void CodeGenerator::generateAssignStmt(const AssignmentStmt *st)
         } else {
             // assegnazione di un array ad un altro: arr1 = arr2;
             auto varExpr = dynamic_cast<const VariableExpr*>(st->value.get());
-            llvm::Value* source = lookupSymbol(varExpr->name);
+            llvm::Value* source = scopeStack.lookupSymbol(varExpr->name).value();
 
             llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(symbol->getAllocatedType());
             llvm::Type* elementType = arrType->getElementType();
@@ -570,14 +512,14 @@ void CodeGenerator::generateAssignStmt(const AssignmentStmt *st)
 
 void CodeGenerator::generateDeclarationStmt(const DeclarationStmt *st)
 {
-    if(isGlobalScope()) 
+    if(scopeStack.isGlobalScope()) 
     {
         throw std::runtime_error("codegen internal error: global variable declarations not yet supported");
     }
 
     // alloca variabile locale
     auto* alloc = Builder.CreateAlloca(getLLVMType(st->type), nullptr, st->name);
-    declareSymbol(st->name, alloc);
+    scopeStack.declareSymbol(st->name, alloc);
 
     if(st->initializer) 
     {
@@ -587,9 +529,9 @@ void CodeGenerator::generateDeclarationStmt(const DeclarationStmt *st)
             } else {
                 //inizializzazione arr1 = arr2
                 auto varExpr = dynamic_cast<const VariableExpr*>(st->initializer.get());
-                llvm::Value* source = lookupSymbol(varExpr->name);
+                llvm::Value* source = scopeStack.lookupSymbol(varExpr->name).value();
                 
-                llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(lookupSymbol(st->name)->getAllocatedType());
+                llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(scopeStack.lookupSymbol(st->name).value()->getAllocatedType());
                 llvm::Type* elementType = arrType->getElementType();
 
                 copyArrayElements(source, alloc, arrType, elementType);
@@ -620,7 +562,7 @@ void CodeGenerator::generateFunctionStmt(const FunctionStmt *st)
     Builder.SetInsertPoint(entry);
 
     //creazione dello scope della funzione, con dichiarazione dei parametri come variabili
-    pushScope();
+    scopeStack.push();
 
     int i = 0;
     for(auto& arg : function->args())
@@ -632,7 +574,7 @@ void CodeGenerator::generateFunctionStmt(const FunctionStmt *st)
         auto* alloc = Builder.CreateAlloca(getLLVMType(p.type), nullptr, p.name);
         Builder.CreateStore(&arg, alloc);
 
-        declareSymbol(p.name, alloc);
+        scopeStack.declareSymbol(p.name, alloc);
 
         i++;
     }
@@ -645,7 +587,7 @@ void CodeGenerator::generateFunctionStmt(const FunctionStmt *st)
             Builder.CreateRetVoid();
     }
 
-    popScope();
+    scopeStack.pop();
 }
 
 void CodeGenerator::generateReturnStmt(const ReturnStmt *st)
@@ -718,7 +660,7 @@ void CodeGenerator::generateForStmt(const ForStmt *st)
 {
     llvm::Function* function = Builder.GetInsertBlock()->getParent();
 
-    pushScope();
+    scopeStack.push();
     //init
     if (st->init) generateStmt(st->init.get());
 
@@ -760,7 +702,7 @@ void CodeGenerator::generateForStmt(const ForStmt *st)
 
     Builder.SetInsertPoint(afterBB);
 
-    popScope();
+    scopeStack.pop();
 }
 
 void CodeGenerator::generateWhileStmt(const WhileStmt *st)
@@ -933,7 +875,7 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
     // Variable Expression
     else if(auto s = dynamic_cast<const VariableExpr*>(expr))
     {
-        llvm::AllocaInst *val = lookupSymbol(s->name);
+        llvm::AllocaInst *val = scopeStack.lookupSymbol(s->name).value();
         Type type = getType(val->getAllocatedType());
 
         if(type.isArray()) {
@@ -950,13 +892,13 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
     // Array Access Expr
     else if(auto s = dynamic_cast<const ArrayAccessExpr*>(expr))
     {
-        llvm::Value* baseAddr = generateLvalueAddress(s->base.get());
+        llvm::Value* baseAddr = generateLValueAddress(s->base.get());
         llvm::AllocaInst* baseAlloc = llvm::cast<llvm::AllocaInst>(baseAddr);
         llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(baseAlloc->getAllocatedType());
         llvm::Type* llvmTy = arrType->getElementType();
 
         //indirizzo del singolo elemento generato dall'accesso (indirizzo di arr[i])
-        llvm::Value* addr = generateLvalueAddress(s); 
+        llvm::Value* addr = generateLValueAddress(s); 
 
         return ExprGenResult{Builder.CreateLoad(llvmTy, addr), Type(getType(llvmTy))};
     }
