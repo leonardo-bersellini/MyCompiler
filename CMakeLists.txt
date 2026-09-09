@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(MyCompiler 
-    VERSION 1.8.5
+    VERSION 1.8.6
     LANGUAGES CXX
     DESCRIPTION "Bismuth: compilatore sviluppato in C++ e LLVM"
 )
@@ -37,18 +37,42 @@ find_package(LLVM REQUIRED CONFIG)
 
 add_library(BismuthCore STATIC
 
-  compiler/codegen/codegenerator.cpp compiler/codegen/codegenerator.h compiler/codegen/codegen_scopestack.h
-  compiler/constants/AbstractSintaxTree.h compiler/constants/keywords.h compiler/constants/symbols.h compiler/constants/token.h compiler/constants/types.h
-  compiler/driver/compilerdriver.cpp compiler/driver/compilerdriver.h compiler/driver/flags.h compiler/driver/options.h
-  compiler/driver/commandlineparser/commandlineparser.h compiler/driver/commandlineparser/commandlineparser.cpp
-  compiler/errors/errorlog.cpp compiler/errors/errorlog.h
-  compiler/errors/recovery/recoveryhandler.cpp compiler/errors/recovery/recoveryhandler.h
-  compiler/lexer/lexer.cpp compiler/lexer/lexer.h
-  compiler/parser/parser.cpp compiler/parser/parser.h
-  compiler/semantics/semanticanalyzer.cpp compiler/semantics/semanticanalyzer.h
-  compiler/utils/ansi/ansi.h compiler/utils/ansi/ansi.cpp
+  compiler/codegen/codegenerator.cpp 
+  compiler/codegen/codegenerator.h 
+  compiler/codegen/codegen_scopestack.h
+  
+  compiler/constants/AbstractSintaxTree.h 
+  compiler/constants/keywords.h 
+  compiler/constants/symbols.h 
+  compiler/constants/token.h 
+  compiler/constants/types.h
+
+  compiler/driver/compilerdriver.cpp 
+  compiler/driver/compilerdriver.h 
+  compiler/driver/flags.h 
+  compiler/driver/options.h
+  compiler/driver/commandlineparser/commandlineparser.h 
+  compiler/driver/commandlineparser/commandlineparser.cpp
+
+  compiler/errors/errorlog.cpp 
+  compiler/errors/errorlog.h
+  compiler/errors/recovery/recoveryhandler.cpp 
+  compiler/errors/recovery/recoveryhandler.h
+
+  compiler/lexer/lexer.cpp 
+  compiler/lexer/lexer.h
+
+  compiler/parser/parser.cpp 
+  compiler/parser/parser.h
+
+  compiler/semantics/semanticanalyzer.cpp 
+  compiler/semantics/semanticanalyzer.h
+
+  compiler/utils/ansi/ansi.h 
+  compiler/utils/ansi/ansi.cpp
   compiler/utils/visitor/template_visitor.h
-  compiler/utils/stack/template_stack.h compiler/utils/stack/scope_stack.h
+  compiler/utils/stack/template_stack.h 
+  compiler/utils/stack/scope_stack.h
 
 )
 

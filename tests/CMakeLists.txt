@@ -22,6 +22,7 @@ add_executable(bismuth_tests
     test_semantics.cpp
     test_codegen.cpp
     test_types.cpp
+    test_integration.cpp
 )
 
 target_link_libraries(bismuth_tests PRIVATE

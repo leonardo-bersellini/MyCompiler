@@ -8,8 +8,6 @@
 // quindi da qui non è possibile ispezionare l'IR prodotto per fare assert puntuali
 // (es. "la funzione main contiene una add"). Questi test sono quindi smoke test:
 // verificano che generate() non vada in crash/assert su programmi semanticamente validi.
-// Se in futuro vuoi test più precisi sull'IR generato, serve un getter (anche solo per i test,
-// es. tramite una build di CodeGenerator con friend class o un metodo dumpIRToString()).
 
 namespace
 {
