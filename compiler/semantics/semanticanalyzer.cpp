@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <string>
+#include <variant>
 
 #include "toplevel-rules.h"
 
@@ -19,7 +20,6 @@ void SemanticAnalyzer::analyzeProgram(const Program &program, ErrorLog &errorLog
 {
     this->errorLog = &errorLog;
     this->scopeStack.clear();
-    this->functionTable.clear();
     this->currentFunction = nullptr;
     this->loopDepth = 0;
 
@@ -203,7 +203,6 @@ void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
 
     if(s->isConst && !s->initializer) {
         errorLog->addError("could not declare a const variable without initialization");
-        scopeStack.declareSymbol(s->name, SymbolInfo(s->type, false)); // dichiarato ma non const, per evitare errori a cascata
         return;
     }
 
@@ -222,13 +221,18 @@ void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
     if(scopeStack.symbolExistsInCurrentScope(s->name)) {
         errorLog->addError("redeclaration of variable: " + s->name);
     } else {
-        scopeStack.declareSymbol(s->name, SymbolInfo(s->type, s->isConst));
+        scopeStack.declareSymbol(s->name, Symbol(VariableSymbol(s->type, s->isConst)));
     }
 }
 
 void SemanticAnalyzer::analyseFunction(const FunctionStmt* s)
 {
-    if(functionTable.contains(s->name)) {
+    if(!scopeStack.isGlobalScope()) {
+        errorLog->addError("could not declare a function inside another qualified scope");
+        return;
+    }
+
+    if(scopeStack.symbolExistsAnywhere(s->name)) {
         // funzione già dichiarata
         errorLog->addError("redeclaration of function:" + s->name);
         return;
@@ -241,17 +245,18 @@ void SemanticAnalyzer::analyseFunction(const FunctionStmt* s)
         paramsType.push_back(p.type);
     }
 
-    functionTable.insert({s->name, FunctionInfo{s->returnType, paramsType}});
+    FunctionSymbol func{s->returnType, paramsType};
+    scopeStack.declareSymbol(s->name, Symbol(func));
 
     //scope locale alla funzione
     scopeStack.push();
 
     // dichiarazione dei parametri come variabili nello scope
     for(const FunctionParam& p : s->params) {
-        scopeStack.declareSymbol(p.name, SymbolInfo(p.type, p.isConst));
+        scopeStack.declareSymbol(p.name, Symbol(VariableSymbol(p.type, p.isConst)));
     }
 
-    currentFunction = &functionTable[s->name];
+    currentFunction = &func;
 
     // ogni funzione non-void deve avere un return valido per ogni path
     if(!s->returnType.is(PrimitiveType::Void) && !allPathsReturn(s->body.get())) {
@@ -442,14 +447,22 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     // Variable Expression
     else if(auto s = dynamic_cast<const VariableExpr*>(expr))
     {
-        if(!scopeStack.symbolExistsAnywhere(s->name)) {
-            errorLog->addError("variable not defined. variable name: " + s->name);
+        auto symbol = scopeStack.lookupSymbol(s->name);
+        if(!symbol) {
+            errorLog->addError("undefined symbol: " + s->name);
             return ExprAnalysisResult(Type(PrimitiveType::Error));
         }
-        ExprAnalysisResult result;
-        result.type = scopeStack.lookupSymbol(s->name)->type;
-        result.isConst = scopeStack.lookupSymbol(s->name)->isConst;
-        return result;
+
+        return std::visit(SymbolVisitor{
+            [] (const VariableSymbol& v) 
+            {
+                return ExprAnalysisResult(v.type, v.isConst);
+            },
+            [&] (const FunctionSymbol& f) {
+                errorLog->addError("'" + s->name + "' is a function, cannot be used as a variable");
+                return ExprAnalysisResult(Type(PrimitiveType::Error));
+            }
+        }, symbol->category);
     }
 
     //Array access Expression
@@ -510,26 +523,36 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     // Function Call Expression
     else if(auto s = dynamic_cast<const CallExpr*>(expr))
     {
-        if(!functionTable.contains(s->name)) {
-            errorLog->addError(s->name + " was not declared in this scope");
+        auto symbol = scopeStack.lookupSymbol(s->name);
+        if(!symbol) {
+            errorLog->addError("undefined symbol: " + s->name);
             return ExprAnalysisResult(Type(PrimitiveType::Error));
         }
 
-        if(s->args.size() != functionTable[s->name].paramTypes.size()) {
-            errorLog->addError("errore _#325 - callexpr in analyseExpr");
-            return ExprAnalysisResult(Type(PrimitiveType::Error));
-        }
+        return std::visit(SymbolVisitor{
+            [&](const FunctionSymbol& f) 
+            {
+                if(s->args.size() != f.paramTypes.size()) {
+                    errorLog->addError("errore _#325 - callexpr in analyseExpr");
+                    return ExprAnalysisResult(Type(PrimitiveType::Error));
+                }
 
-        for(int i=0; i < s->args.size(); ++i) {
-            auto res = analyzeExpr(s->args.at(i).get());
+                for(int i=0; i < s->args.size(); ++i) {
+                    auto res = analyzeExpr(s->args.at(i).get());
 
-            if(!types::isAssignmentCompatible(functionTable[s->name].paramTypes.at(i), res.type)) {
-                errorLog->addError("error _#332 - callexpr in analyze expr");
+                    if(!types::isAssignmentCompatible(f.paramTypes.at(i), res.type)) {
+                        errorLog->addError("internal error _#332 - callexpr in analyze expr");
+                        return ExprAnalysisResult(Type(PrimitiveType::Error));
+                    }
+                }
+
+                return ExprAnalysisResult{f.returnType};
+            },
+            [&](const VariableSymbol& v) {
+                errorLog->addError("'" + s->name + "' is not a function, cannot be called");
                 return ExprAnalysisResult(Type(PrimitiveType::Error));
-            }
-        }
-
-        return ExprAnalysisResult{functionTable[s->name].returnType};
+            },
+        }, symbol->category);
     }
 
     // Binary Expression

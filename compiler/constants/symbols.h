@@ -3,32 +3,45 @@
 
 #include <string>
 #include <vector>
+#include <variant>
 
 #include "token.h"
 #include "types.h"
 
-/** SYMBOL
- *  per simbolo si intendono tutti gli identifier ed in generale le parole che fungono da
- *  riferimento per qualcosa (variabili per valore, funzioni per parti di codice), e che non sono
- *  parole chiave, ma scritte in modo arbitrario dall'utente.
- **/
+#include "utils/visitor/template_visitor.h"
 
-struct SymbolInfo {
+
+struct VariableSymbol {
 public:
-    explicit SymbolInfo(const Type& t, const bool& c) : type(t), isConst(c) {}
+    explicit VariableSymbol(const Type& t, const bool& c) : type(t), isConst(c) {}
     
     Type type;
     bool isConst;
 };
 
-/** FUNCTION INFO
- *  Questa struttura permette di riassumere i dati delle funzioni, permettendo le analisi semantiche
- *  in base alla tipologia dei dati.
- */
-
-struct FunctionInfo {
+struct FunctionSymbol {
+public:
     Type returnType;
     std::vector<Type> paramTypes;
+};
+
+/** SYMBOL
+ *  per simbolo si intendono tutti gli identifier ed in generale le parole che fungono da
+ *  riferimento per qualcosa (variabili per valore, funzioni per parti di codice), e che non sono
+ *  parole chiave, ma scritte in modo arbitrario dall'utente.
+ * 
+ *  La struttura symbol può assumere diverse forme di symbol, poichè esistono più tipologie 
+ *  di simboli con membri e informazioni diverse.
+ **/
+
+template<class... Ts>
+using SymbolVisitor = overloaded<Ts...>;
+
+using SymbolCategory = std::variant<VariableSymbol, FunctionSymbol>;
+
+struct Symbol 
+{
+    SymbolCategory category;
 };
 
 #endif // SYMBOLS_H

@@ -27,13 +27,10 @@ public:
 
 private:
     // Permette una lista di scope diversi, insieme di tabelle dei simboli
-    scope_stack<std::string, SymbolInfo> scopeStack; 
-
-    // Tabella delle funzioni dichiarate
-    std::unordered_map<std::string, FunctionInfo> functionTable; 
+    scope_stack<std::string, Symbol> scopeStack; 
         
     // Funzione corrente (se esiste)
-    const FunctionInfo* currentFunction = nullptr; 
+    const FunctionSymbol* currentFunction = nullptr; 
 
     ErrorLog* errorLog;
 
