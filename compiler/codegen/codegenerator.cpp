@@ -265,6 +265,33 @@ Type CodeGenerator::getType(llvm::Type *type)
 }
 
 /*
+ * Questa funzione restituisce un valore llvm di default per ogni tipo richiesto.
+ * I valori di default sono utilizzati per inizializzare variabili globali non inizializzate 
+ * nel codice ricevuto.
+ */
+
+llvm::Constant* CodeGenerator::getDefaultValue(const Type& type) 
+{
+    llvm::Type* llvmType = getLLVMType(type);
+    return llvm::Constant::getNullValue(llvmType);
+} 
+
+/*
+ * Questa funzione permette di risalire al tipo allocato in una variabile letta tramite lookup,
+ * distinguendo correttamente tra llvm Alloca e llvm Global.
+ */
+
+llvm::Type* CodeGenerator::getAllocatedType(llvm::Value* ptr)
+{
+    if (auto* alloc = llvm::dyn_cast<llvm::AllocaInst>(ptr))
+        return alloc->getAllocatedType();
+    if (auto* glob = llvm::dyn_cast<llvm::GlobalVariable>(ptr))
+        return glob->getValueType();
+
+    throw std::runtime_error("codegen internal error: unexpected pointer kind in getAllocatedType");
+}
+
+/*
  * Funzione che applica le conversioni implicite di tipo ai valori.
  * Questa funzione applica in automatico le conversioni fisiche di valore tramite api llvm,
  * ai values (llvm::Value*) di llvm.
@@ -320,7 +347,7 @@ llvm::Value* CodeGenerator::generateLValueAddress(const Expr* target)
         // valore scalare di index
         auto index = generateExpr(arrAccess->index.get()).llvm_value;
 
-        auto type = llvm::cast<llvm::AllocaInst>(arr)->getAllocatedType();
+        auto type = getAllocatedType(arr);
 
         std::vector<llvm::Value*> idx = {
             llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), 0),
@@ -484,8 +511,8 @@ void CodeGenerator::generateScopeStmt(const BlockStmt *st)
 
 void CodeGenerator::generateAssignStmt(const AssignmentStmt *st)
 {
-    auto symbol = llvm::cast<llvm::AllocaInst>(generateLValueAddress(st->target.get()));
-    Type symbolType = getType(symbol->getAllocatedType());
+    auto symbol = generateLValueAddress(st->target.get());
+    Type symbolType = getType(getAllocatedType(symbol));
 
     if(symbolType.isArray()) 
     {
@@ -496,7 +523,7 @@ void CodeGenerator::generateAssignStmt(const AssignmentStmt *st)
             auto varExpr = dynamic_cast<const VariableExpr*>(st->value.get());
             llvm::Value* source = scopeStack.lookupSymbol(varExpr->name).value();
 
-            llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(symbol->getAllocatedType());
+            llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(getAllocatedType(symbol));
             llvm::Type* elementType = arrType->getElementType();
 
             copyArrayElements(source, symbol, arrType, elementType);
@@ -504,7 +531,7 @@ void CodeGenerator::generateAssignStmt(const AssignmentStmt *st)
     } else {
         auto value = generateExpr(st->value.get());
         // conversione dal tipo del valore al tipo della variabile
-        auto casted = castValue(value.llvm_value, value.type.asPrimitive(), getType(symbol->getAllocatedType()).asPrimitive());
+        auto casted = castValue(value.llvm_value, value.type.asPrimitive(), getType(getAllocatedType(symbol)).asPrimitive());
 
         Builder.CreateStore(casted, symbol);
     }
@@ -514,7 +541,42 @@ void CodeGenerator::generateDeclarationStmt(const DeclarationStmt *st)
 {
     if(scopeStack.isGlobalScope()) 
     {
-        throw std::runtime_error("codegen internal error: global variable declarations not yet supported");
+        llvm::Constant* constant;
+
+        if(st->initializer)
+        {
+            auto init = st->initializer.get();
+            
+            if(auto n = dynamic_cast<const NumberExpr*>(st->initializer.get())) {
+                if(n->isInteger) {
+                    constant = llvm::ConstantInt::get(getLLVMType(Type(PrimitiveType::Int)), n->value);
+                } else {
+                    constant = llvm::ConstantFP::get(getLLVMType(Type(PrimitiveType::Double)), n->value);
+                }
+            }
+            else if(auto c = dynamic_cast<const CharExpr*>(st->initializer.get())) {
+                constant = llvm::ConstantInt::get(getLLVMType(Type(PrimitiveType::Char)), c->value);
+            }
+            else if(auto b = dynamic_cast<const BooleanExpr*>(st->initializer.get())) {
+                constant = llvm::ConstantInt::get(getLLVMType(Type(PrimitiveType::Bool)), b->value);
+            }
+            else throw std::runtime_error("internal error: global variable invalid initializer");
+
+        } else {
+            constant = getDefaultValue(st->type);
+        }
+
+        llvm::GlobalVariable* var = new llvm::GlobalVariable(
+            *Module,
+            getLLVMType(st->type), 
+            st->isConst, 
+            llvm::GlobalValue::ExternalLinkage,
+            constant, 
+            st->name
+        );
+        scopeStack.declareGlobal(st->name, var);
+
+        return;
     }
 
     // alloca variabile locale
@@ -531,7 +593,7 @@ void CodeGenerator::generateDeclarationStmt(const DeclarationStmt *st)
                 auto varExpr = dynamic_cast<const VariableExpr*>(st->initializer.get());
                 llvm::Value* source = scopeStack.lookupSymbol(varExpr->name).value();
                 
-                llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(scopeStack.lookupSymbol(st->name).value()->getAllocatedType());
+                llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(getAllocatedType(scopeStack.lookupSymbol(st->name).value()));
                 llvm::Type* elementType = arrType->getElementType();
 
                 copyArrayElements(source, alloc, arrType, elementType);
@@ -875,8 +937,8 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
     // Variable Expression
     else if(auto s = dynamic_cast<const VariableExpr*>(expr))
     {
-        llvm::AllocaInst *val = scopeStack.lookupSymbol(s->name).value();
-        Type type = getType(val->getAllocatedType());
+        llvm::Value *val = scopeStack.lookupSymbol(s->name).value();
+        Type type = getType(getAllocatedType(val));
 
         if(type.isArray()) {
             // non si può eseguire un load singolo su un array
@@ -884,7 +946,7 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
         }
 
         return ExprGenResult {
-            Builder.CreateLoad(val->getAllocatedType(), val, s->name), 
+            Builder.CreateLoad(llvm::cast<llvm::AllocaInst>(val)->getAllocatedType(), val, s->name), 
             type,
         };
     }
@@ -893,8 +955,7 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
     else if(auto s = dynamic_cast<const ArrayAccessExpr*>(expr))
     {
         llvm::Value* baseAddr = generateLValueAddress(s->base.get());
-        llvm::AllocaInst* baseAlloc = llvm::cast<llvm::AllocaInst>(baseAddr);
-        llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(baseAlloc->getAllocatedType());
+        llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(getAllocatedType(baseAddr));
         llvm::Type* llvmTy = arrType->getElementType();
 
         //indirizzo del singolo elemento generato dall'accesso (indirizzo di arr[i])

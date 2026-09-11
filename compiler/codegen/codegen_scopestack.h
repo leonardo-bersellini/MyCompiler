@@ -2,7 +2,9 @@
 #define CODEGEN_SCOPE_STACK_H
 
 #include <string>
-#include <llvm/IR/Instructions.h>
+#include <unordered_map>
+
+#include <llvm/IR/Value.h>
 
 #include "utils/stack/scope_stack.h"
 
@@ -14,7 +16,7 @@
  * correttezza, implementa direttamente i typename necessari per il codegen.
  */
 
-class AllocaScopeStack : public scope_stack<std::string, llvm::AllocaInst*>
+class AllocaScopeStack : public scope_stack<std::string, llvm::Value*>
 {
 public:
 
@@ -24,7 +26,7 @@ public:
     * Se non trovato in nessun livello, il programma lancia un eccezione. Si tratta di un
     * bug interno del compiler, l'analisi semantica avrebbe dovuto bloccarlo.
     */
-    std::optional<llvm::AllocaInst*> lookupSymbol(const std::string& name) const override 
+    std::optional<llvm::Value*> lookupSymbol(const std::string& name) const override 
     {
         for (auto it = this->m_stack.rbegin(); it != this->m_stack.rend(); ++it)
         {
@@ -34,9 +36,31 @@ public:
             }
         }
 
+        auto g = lookupGlobal(name);
+        if(g) return g;
+
         throw std::runtime_error("codegen internal error: undeclared symbol '" + name + "'");
         return std::nullopt;
     }
+
+    /*
+     * Metodo che permette la dichiarazione di una variabile globale llvm, salvata
+     * nella mappa interna dedicata alle globals
+     */
+    void declareGlobal(const std::string& name, llvm::GlobalVariable* g) {
+        globals.insert({name, g});
+    }
+
+    /*
+     * Lookup specifico per la mappa delle variabili globali.
+     */
+    llvm::GlobalVariable* lookupGlobal(const std::string& name) const {
+        auto it = globals.find(name);
+        return it != globals.end() ? it->second : nullptr;
+    }
+
+private:
+    std::unordered_map<std::string, llvm::GlobalVariable*> globals;
 
 };
 

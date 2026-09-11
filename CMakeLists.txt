@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(MyCompiler 
-    VERSION 1.8.7
+    VERSION 1.8.8
     LANGUAGES CXX
     DESCRIPTION "Bismuth: compilatore sviluppato in C++ e LLVM"
 )

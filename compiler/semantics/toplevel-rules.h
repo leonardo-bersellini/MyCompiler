@@ -9,9 +9,9 @@
 
 #include "AbstractSintaxTree.h"
 
-inline const std::array<std::type_index, 1> valid_global_stmts = 
+inline const std::array<std::type_index, 2> valid_global_stmts = 
 {
-    // typeid( DeclarationStmt ), -> bisogna modificare il codegen per supportare alloca globali
+    typeid( DeclarationStmt ), 
     typeid( FunctionStmt    ),
 };
 

@@ -218,6 +218,20 @@ void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
         }
     }
 
+    if(scopeStack.isGlobalScope() && s->initializer) 
+    {
+        //dichiarazione globale, controllo di valore const
+        auto* init = s->initializer.get();
+        bool isLiteral = dynamic_cast<const NumberExpr*>(init)
+                        || dynamic_cast<const CharExpr*>(init)
+                        || dynamic_cast<const BooleanExpr*>(init);
+
+        if(!isLiteral) {
+            errorLog->addError("global variable '" + s->name + "' must be initialized with a constant literal");
+            return;
+        }
+    }
+
     if(scopeStack.symbolExistsInCurrentScope(s->name)) {
         errorLog->addError("redeclaration of variable: " + s->name);
     } else {
