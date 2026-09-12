@@ -160,6 +160,11 @@ std::unique_ptr<Stmt> Parser::parseStatement()
 
         return parseForStmt();
     }
+    else if(check(TokenType::NamespaceKeyword))
+    {
+        // Namespace Declaration
+        return parseNamespaceStmt();
+    }
     else if(check(TokenType::SwitchKeyword))
     {
         return parseSwitchStmt();
@@ -726,6 +731,35 @@ std::unique_ptr<DefaultStmt> Parser::parseDefaultStmt()
     }
 
     return _default;
+}
+
+/*
+ * Questa funzione si occupa del parsing delle dichiarazioni di namespace
+ */
+
+std::unique_ptr<Stmt> Parser::parseNamespaceStmt()
+{
+    advance(); //consuma namespace
+
+    if(!check(TokenType::Identifier)) {
+        errorLog->addError("expected identifier after namespace declaration keyword", peek().position);
+        return std::make_unique<ErrorStmt>();
+    }
+
+    auto _namespace = std::make_unique<NamespaceStmt>();
+    _namespace->name = advance().lexeme;
+    
+    expect(TokenType::LBrace, true);
+    while(!isAtEnd() && peek().type != TokenType::RBrace) {
+        _namespace->body.push_back(std::move(parseStatement()));
+    }
+
+    if(isAtEnd()) {
+        errorLog->addError("Expected '}' before end of file", peek().position);
+    }
+    expect(TokenType::RBrace, true);
+
+    return _namespace;
 }
 
 /**

@@ -26,6 +26,8 @@ inline std::unique_ptr<Program> analyzeSource(const std::string& source, ErrorLo
 {
     auto program = parseSource(source, errorLog);
     SemanticAnalyzer analyzer;
+    NamespaceTable ns;
+    analyzer.assignNamespaceTable(ns);
     analyzer.analyzeProgram(*program, errorLog);
     return program;
 }

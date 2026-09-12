@@ -179,6 +179,12 @@ public:
     std::unique_ptr<DefaultStmt> _default;
 };
 
+class NamespaceStmt : public Stmt {
+public:
+    std::string name; 
+    std::vector<std::unique_ptr<Stmt>> body;
+};
+
 class ErrorStmt : public Stmt {
 public:
     //void, placeholder per error stmt

@@ -23,6 +23,8 @@
 
 #include "codegen_scopestack.h"
 
+#include "utils/namespace/namespace.h"
+
 // struttura di ritorno della generazione delle espressioni
 struct ExprGenResult {
     llvm::Value* llvm_value;
@@ -36,6 +38,7 @@ public:
     ~CodeGenerator() = default;
 
     void generate(const Program& program);
+    void assignNamespaceTable(NamespaceTable& namespaceTable);
 
     void emitIR();      //ir code
     void buildTargetObj(const std::string &target_path, bool debug = false); //creazione target obj
@@ -48,6 +51,9 @@ private:
 
     // stack di scopes per mantenere lo shadowing dei valori allocati
     AllocaScopeStack scopeStack;
+
+    //tabella namespace condivisa
+    NamespaceTable* namespaceTable;
 
     llvm::Type* getLLVMType(const Type &type);
     Type getType(llvm::Type *type);
@@ -72,6 +78,7 @@ private:
     void generateForStmt(const ForStmt* st);
     void generateWhileStmt(const WhileStmt* st);
     void generateSwitchStmt(const SwitchStmt* st);
+    void generateNamespaceStmt(const NamespaceStmt* st);
 
     std::vector<llvm::ConstantInt*> collectCaseLabels(const CaseStmt* c, const CaseStmt*& leaf);
     llvm::ConstantInt* generateConstantLabel(const Expr* label);

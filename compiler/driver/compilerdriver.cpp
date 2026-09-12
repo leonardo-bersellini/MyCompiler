@@ -13,6 +13,7 @@
 
 #include "commandlineparser/commandlineparser.h"
 #include "utils/ansi/ansi.h"
+#include "utils/namespace/namespace.h"
 
 #include "version.h" //generato da cmake
 
@@ -295,6 +296,10 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
     SemanticAnalyzer analyzer;
     ErrorLog errorLog;
     CodeGenerator codegen;
+
+    NamespaceTable namespaceTable;
+    analyzer.assignNamespaceTable(namespaceTable);
+    codegen.assignNamespaceTable(namespaceTable);
 
     // Lettura e parsing del codice, indipendente dai flags
     const std::vector<Token> tokens = lexer.analiseString(source, errorLog);

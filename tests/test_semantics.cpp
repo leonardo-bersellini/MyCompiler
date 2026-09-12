@@ -24,12 +24,12 @@ TEST_CASE("Regole di top-level", "[semantics]")
         REQUIRE(errorLog.hasErrors());
     }
 
-    SECTION("una dichiarazione a livello globale non è ammessa")
+    SECTION("una dichiarazione a livello globale è ammessa")
     {
         ErrorLog errorLog;
         analyzeSource("int x = 1; int main() { return 0; }", errorLog);
 
-        REQUIRE(errorLog.hasErrors());
+        REQUIRE_FALSE(errorLog.hasErrors());
     }
 }
 

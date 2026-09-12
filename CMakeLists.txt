@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(MyCompiler 
-    VERSION 1.8.8
+    VERSION 1.8.9
     LANGUAGES CXX
     DESCRIPTION "Bismuth: compilatore sviluppato in C++ e LLVM"
 )
@@ -67,12 +67,14 @@ add_library(BismuthCore STATIC
 
   compiler/semantics/semanticanalyzer.cpp 
   compiler/semantics/semanticanalyzer.h
+  compiler/semantics/toplevel-rules.h
 
   compiler/utils/ansi/ansi.h 
   compiler/utils/ansi/ansi.cpp
   compiler/utils/visitor/template_visitor.h
   compiler/utils/stack/template_stack.h 
   compiler/utils/stack/scope_stack.h
+  compiler/utils/namespace/namespace_table.h
 
 )
 

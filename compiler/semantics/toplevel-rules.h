@@ -9,10 +9,11 @@
 
 #include "AbstractSintaxTree.h"
 
-inline const std::array<std::type_index, 2> valid_global_stmts = 
+inline const std::array<std::type_index, 3> valid_global_stmts = 
 {
     typeid( DeclarationStmt ), 
     typeid( FunctionStmt    ),
+    typeid( NamespaceStmt   ),
 };
 
 inline const std::array<std::string, 5> valid_winmain_identifiers = 

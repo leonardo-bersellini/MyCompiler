@@ -56,6 +56,11 @@ void SemanticAnalyzer::analyzeProgram(const Program &program, ErrorLog &errorLog
 
 }
 
+void SemanticAnalyzer::assignNamespaceTable(NamespaceTable& namespaceTable)
+{
+    this->namespaceTable = &namespaceTable;
+}
+
 /*
  * Analizza lo statement fornito come parametro.
  * Tramite dynamic_cast, risale al tipo di statement fornito e lo instrada di conseguenza all'analisi
@@ -155,6 +160,12 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
         }
     }
 
+    // Namespace
+    else if(auto s = dynamic_cast<const NamespaceStmt*>(stmt))
+    {
+        analyzeNamespace(s);
+    }
+
     // Errore
     else if(auto s = dynamic_cast<const ErrorStmt*>(stmt))
     {
@@ -241,8 +252,8 @@ void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
 
 void SemanticAnalyzer::analyseFunction(const FunctionStmt* s)
 {
-    if(!scopeStack.isGlobalScope()) {
-        errorLog->addError("could not declare a function inside another qualified scope");
+    if(currentFunction != nullptr) {
+        errorLog->addError("could not declare a function inside another function scope");
         return;
     }
 
@@ -306,8 +317,8 @@ void SemanticAnalyzer::analyzeReturn(const ReturnStmt* s)
         ExprAnalysisResult res = analyzeExpr(s->value.get());
 
         if(!types::isAssignmentCompatible(currentFunction->returnType, res.type)) {
-            errorLog->addError("could not convert " + types::toString(currentFunction->returnType) +
-                               " to " + types::toString(res.type) + " in return");
+            errorLog->addError("could not convert " + types::toString(res.type) +
+                               " to " + types::toString(currentFunction->returnType) + " in return");
             return;
         }
     }
@@ -419,6 +430,58 @@ void SemanticAnalyzer::analyzeDefault(const DefaultStmt* s)
     for(const auto& st : s->body) {
         analyzeStmt(st.get());
     }
+}
+
+/*
+ * Si occupa dell'analisi di una dichiarazione di  namespace.
+ * All'interno di un namespace possono esistere solo dichiarazioni di simboli, quindi sono 
+ * accettati e controllati solo symbols e non stmt di tipo generale.
+ * 
+ * nota: questa funzione si divide in due parti, la prima di "update" della namespace table, 
+ * e la seconda di analisi effettiva, che richiama le stesse funzioni dell'analisi semantica
+ * trattando il namespace come un nuovo scope.
+ */
+
+void SemanticAnalyzer::analyzeNamespace(const NamespaceStmt* s)
+{
+    namespaceTable->push(s->name);
+    scopeStack.push(); //? l'analisi deve cmq trattare il namespace come scope
+
+    for(const auto& st : s->body)
+    {
+        if(auto d = dynamic_cast<const DeclarationStmt*>(st.get()))
+        {
+            if(namespaceTable->symbolExistInCurrentNamespace(d->name)) {
+                errorLog->addError("redeclaration of symbol: " + s->name + "::" + d->name);
+                continue;
+            } else {
+                namespaceTable->declareSymbol(d->name, Symbol(VariableSymbol(d->type, d->isConst)));
+            }
+
+            analyzeStmt(d);
+        }
+        else if(auto d = dynamic_cast<const FunctionStmt*>(st.get()))
+        {
+            if(namespaceTable->symbolExistInCurrentNamespace(d->name)) {
+                errorLog->addError("redeclaration of function: " + d->name);
+                continue;
+            } else {
+                std::vector<Type> paramTypes;
+                for(const auto p : d->params) {
+                    paramTypes.push_back(p.type);
+                }
+                namespaceTable->declareSymbol(d->name, Symbol(FunctionSymbol(d->returnType, paramTypes)));
+            }
+
+            analyzeStmt(d);
+        }
+        else {
+            errorLog->addError("invalid statement in namespace definition");
+        }
+    }
+
+    scopeStack.pop();
+    namespaceTable->pop();
 }
 
 
@@ -547,7 +610,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
             [&](const FunctionSymbol& f) 
             {
                 if(s->args.size() != f.paramTypes.size()) {
-                    errorLog->addError("errore _#325 - callexpr in analyseExpr");
+                    errorLog->addError("called function '" + s->name + "()" + "' required a different number of parameters than provided");
                     return ExprAnalysisResult(Type(PrimitiveType::Error));
                 }
 
@@ -555,7 +618,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
                     auto res = analyzeExpr(s->args.at(i).get());
 
                     if(!types::isAssignmentCompatible(f.paramTypes.at(i), res.type)) {
-                        errorLog->addError("internal error _#332 - callexpr in analyze expr");
+                        errorLog->addError("incopatible parameter type in function call to " + s->name);
                         return ExprAnalysisResult(Type(PrimitiveType::Error));
                     }
                 }

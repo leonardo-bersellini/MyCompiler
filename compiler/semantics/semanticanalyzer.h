@@ -9,6 +9,7 @@
 #include "errors/errorlog.h"
 
 #include "utils/stack/scope_stack.h"
+#include "utils/namespace/namespace.h"
 
 // struttura di ritorno dell'analisi delle espressioni, racchiude i dati di analisi
 struct ExprAnalysisResult {
@@ -24,6 +25,7 @@ public:
     SemanticAnalyzer();
 
     void analyzeProgram(const Program& program, ErrorLog& errorLog);
+    void assignNamespaceTable(NamespaceTable& namespaceTable);
 
 private:
     // Permette una lista di scope diversi, insieme di tabelle dei simboli
@@ -33,6 +35,7 @@ private:
     const FunctionSymbol* currentFunction = nullptr; 
 
     ErrorLog* errorLog;
+    NamespaceTable* namespaceTable;
 
     int loopDepth = 0; //contatore dell'anidamento dei cicli iterativi
 
@@ -47,6 +50,7 @@ private:
     void analyzeFor(const ForStmt* s);
     void analyzeWhile(const WhileStmt* s);
     void analyzeSwitch(const SwitchStmt* s);
+    void analyzeNamespace(const NamespaceStmt* s);
 
     void analyzeCase(const CaseStmt* s, const PrimitiveType& switch_type);
     void analyzeDefault(const DefaultStmt* s);

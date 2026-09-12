@@ -21,6 +21,9 @@ public:
 
 struct FunctionSymbol {
 public:
+    explicit FunctionSymbol(const Type& rty, const std::vector<Type>& prm) 
+        : returnType(rty), paramTypes(prm) {}
+        
     Type returnType;
     std::vector<Type> paramTypes;
 };

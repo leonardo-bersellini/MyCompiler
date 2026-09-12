@@ -27,6 +27,8 @@ TEST_CASE("CodeGenerator genera senza crash un programma minimo", "[codegen]")
     auto program = buildValidProgram("int main() { return 0; }");
 
     CodeGenerator codegen;
+    NamespaceTable ns;
+    codegen.assignNamespaceTable(ns);
     REQUIRE_NOTHROW(codegen.generate(*program));
 }
 
@@ -36,6 +38,8 @@ TEST_CASE("CodeGenerator genera senza crash dichiarazioni ed espressioni aritmet
         "int main() { int x = 5; double y = x + 2.5; return 0; }");
 
     CodeGenerator codegen;
+    NamespaceTable ns;
+    codegen.assignNamespaceTable(ns);
     REQUIRE_NOTHROW(codegen.generate(*program));
 }
 
@@ -51,6 +55,8 @@ TEST_CASE("CodeGenerator genera senza crash if/else e cicli", "[codegen]")
         "}");
 
     CodeGenerator codegen;
+    NamespaceTable ns;
+    codegen.assignNamespaceTable(ns);
     REQUIRE_NOTHROW(codegen.generate(*program));
 }
 
@@ -61,5 +67,7 @@ TEST_CASE("CodeGenerator genera senza crash una chiamata di funzione con paramet
         "int main() { int r = add(2, 3); return 0; }");
 
     CodeGenerator codegen;
+    NamespaceTable ns;
+    codegen.assignNamespaceTable(ns);
     REQUIRE_NOTHROW(codegen.generate(*program));
 }

@@ -31,6 +31,7 @@ enum class TokenType {
     ReturnKeyword,
     VoidKeyword,
     ConstKeyword,
+    NamespaceKeyword,
 
     SwitchKeyword,
     CaseKeyword,

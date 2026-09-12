@@ -47,6 +47,7 @@ private:
     std::unique_ptr<Stmt> parseForStmt();
     std::unique_ptr<Stmt> parseWhileStmt();
     std::unique_ptr<Stmt> parseSwitchStmt();
+    std::unique_ptr<Stmt> parseNamespaceStmt();
 
     std::unique_ptr<CaseStmt> parseCaseStmt();
     std::unique_ptr<DefaultStmt> parseDefaultStmt();

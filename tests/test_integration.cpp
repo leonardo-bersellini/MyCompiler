@@ -12,6 +12,8 @@ TEST_CASE("Testing scripts for bismuth code", "[integration]")
 
         ErrorLog errorLog;
         CodeGenerator codegen;
+        NamespaceTable ns;
+        codegen.assignNamespaceTable(ns);
         auto program = analyzeSource(input, errorLog);
 
         REQUIRE_FALSE(errorLog.hasErrors());
@@ -45,6 +47,8 @@ TEST_CASE("Testing scripts for bismuth code", "[integration]")
 
         ErrorLog errorLog;
         CodeGenerator codegen;
+        NamespaceTable ns;
+        codegen.assignNamespaceTable(ns);
         auto program = analyzeSource(input, errorLog);
 
         REQUIRE_FALSE(errorLog.hasErrors());
