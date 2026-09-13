@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(MyCompiler 
-    VERSION 1.8.10
+    VERSION 1.8.11
     LANGUAGES CXX
     DESCRIPTION "Bismuth: compilatore sviluppato in C++ e LLVM"
 )
@@ -91,6 +91,8 @@ target_include_directories(BismuthCore PUBLIC ${CMAKE_BINARY_DIR}/generated)
 target_include_directories(BismuthCore PUBLIC ${LLVM_INCLUDE_DIRS})
 target_compile_definitions(BismuthCore PUBLIC ${LLVM_DEFINITIONS})
 
+target_compile_options(BismuthCore PRIVATE -ffunction-sections -fdata-sections)
+
 
 # INCLUDE LLVM COMPONENTS
 
@@ -117,6 +119,7 @@ add_executable(Bismuth
 )
 
 target_link_libraries(Bismuth PRIVATE BismuthCore)
+target_link_options(Bismuth PRIVATE -static -static-libgcc -static-libstdc++ -Wl,--gc-sections)
 
 
 # BISMUTH TESTING
@@ -156,9 +159,6 @@ set_target_properties(Bismuth PROPERTIES OUTPUT_NAME "Bismuth${EXE_SUFFIX}")
 add_custom_command(TARGET Bismuth POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/third_party/lld"
-        "$<TARGET_FILE_DIR:Bismuth>"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_SOURCE_DIR}/third_party/mingw-runtime"
         "$<TARGET_FILE_DIR:Bismuth>"
 )
 
