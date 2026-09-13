@@ -176,7 +176,6 @@ std::unique_ptr<Stmt> Parser::parseStatement()
         advance();                       // consuma 'break'
         expect(TokenType::Semicolon);    // consuma ';'
         return std::make_unique<BreakStmt>();
-
     }
     else if(check(TokenType::ContinueKeyword))
     {
@@ -305,6 +304,47 @@ Type Parser::parseArrayType()
     }
 
     return Type(PrimitiveType::Error); //never reached
+}
+
+/*
+ * Questa funzione permette di centralizzare la logica di controllo ed esecuzione del parsing
+ * di un nome qualificato (a::b). 
+ * Ritorna sia un pair con una string singola (il name) e la struttura utilizzata per rappresentare
+ * un insieme di qualifiers.
+ * Inizia la procedura di parsing da un identifier.
+ */
+
+std::pair<std::string, Qualifiers> Parser::resolveQualifiedName()
+{
+    Token identifierTkn = advance();
+
+    if(identifierTkn.type != TokenType::Identifier) {
+        errorLog->addError("expected an identifier as valid name, received none", peek().position);
+        recoveryHandler.synchronize({TokenType::LBrace, TokenType::RBrace});
+        std::pair<std::string, Qualifiers> p;
+        return p;
+    }
+
+    std::pair<std::string, Qualifiers> result;
+    result.second.push_back(identifierTkn.lexeme);
+
+    while(check(TokenType::ColonColon))
+    {
+        advance(); //consuma ::
+
+        if(!check(TokenType::Identifier)) {
+            errorLog->addError("expected identifier after '::' in qualified name");
+            break;
+        }
+
+        result.second.push_back(advance().lexeme);
+    }
+
+    //l'ultimo identifier è il name
+    result.first = std::move(result.second.back());
+    result.second.pop_back();
+
+    return result;
 }
 
 /*
@@ -1025,7 +1065,10 @@ std::unique_ptr<Expr> Parser::parseFactor()
     {
         auto call = std::make_unique<CallExpr>();
 
-        call->name = advance().lexeme;
+        auto nameInfo = resolveQualifiedName();
+
+        call->name = nameInfo.first;
+        call->qualifiers = nameInfo.second;
         expect(TokenType::LParen, true);
 
         std::vector<std::unique_ptr<Expr>> args;
@@ -1062,10 +1105,11 @@ std::unique_ptr<Expr> Parser::parseFactor()
     // Variabile 
     else if(check(TokenType::Identifier))
     {
-        auto name = advance().lexeme;
+        auto nameInfo = resolveQualifiedName();
 
         auto variableExpr = std::make_unique<VariableExpr>();
-        variableExpr->name = name;
+        variableExpr->name = nameInfo.first;
+        variableExpr->qualifiers = nameInfo.second;
         return variableExpr;
     }
 

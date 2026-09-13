@@ -95,27 +95,27 @@ public:
 
     /*
      * Risolve un controllo richiesto su nomi qualified (es. a::b dentro il namespace corrente).
-     * Ritorna un true se il valore richiesto è valido come namespace, partendo da un livello
+     * Ritorna il simbolo se il valore richiesto è valido come namespace, partendo da un livello
      * globale. Se il namespace non viene trovato, allora il qualified name corrisponde ad una
      * richiesta semanticamente incorretta.
      */
-    bool searchQualifiedName(const std::vector<std::string>& names) const
+    std::optional<B> searchQualifiedName(const std::vector<std::string>& qualifiers, const A& name) const
     {
-        std::size_t i = 0;
+        if (qualifiers.empty()) return std::nullopt;
 
-        if(!m_namespaces.contains(names.at(i))) return false;
+        if (!m_namespaces.contains(qualifiers[0])) return std::nullopt;
+        const Namespace* n = m_namespaces.at(qualifiers[0]).get();
 
-        const Namespace* n = m_namespaces[names[i]].get();
-        ++i;
-
-        for(std::size_t j = i; j < names.size(); ++j) 
-        { 
-            if(!n->childs.contains(names.at(j))) return false;
-
-            n = n->childs[names[j]].get();
+        for (std::size_t i = 1; i < qualifiers.size(); ++i) {
+            auto it = n->childs.find(qualifiers[i]);
+            if (it == n->childs.end()) return std::nullopt;
+            n = it->second.get();
         }
 
-        return true;
+        auto it = n->symbolTable.find(name);
+        if (it == n->symbolTable.end()) return std::nullopt;
+
+        return it->second;
     }
 
     /*
@@ -187,6 +187,22 @@ public:
 
         for(auto s = segments.rbegin(); s != segments.rend(); s++) {
             result += *s + "$";
+        }
+        result += name;
+
+        return result;
+    }
+
+    /*
+     * Restituisce un nome mangled a partire dai parametri forniti, in modo 
+     * indipendente dallo stato corrente della tabella.
+     */
+    std::string mangleQualifiedName(const Qualifiers& q, const std::string& name)
+    {
+        std::string result = "NS_";
+
+        for(const auto& str : q) {
+            result += str + "$";
         }
         result += name;
 

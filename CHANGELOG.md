@@ -22,9 +22,19 @@ each written as `field_name:` followed by its value.
 
  ---
 
+ **V 1.9.0** &ensp; <@leonardo-bersellini> &emsp; 13 . 09 . 2026
+
+ `commit:` Qualified Names *-o- ()*
+ <br>
+ `scope:` All
+ <br>
+ `features:` implemented qualified names for access to namespaces variables and functions
+
+ ---
+
  **V 1.8.11** &ensp; <@leonardo-bersellini> &emsp; 13 . 09 . 2026
 
- `commit:` Build: Switch to static linking *-o- ()*
+ `commit:` Build: Switch to static linking *-o- (799e824)*
  <br>
  `scope:` CMake, third-party
  <br>

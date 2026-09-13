@@ -60,6 +60,7 @@ private:
     ExprAnalysisResult analyzeBinaryOperation(const BinaryExpr* expr);
 
     bool allPathsReturn(const Stmt* stmt) const;
+    std::optional<Symbol> lookupSymbol(Qualifiers q, const std::string& name);
 };
 
 #endif // SEMANTICANALYZER_H

@@ -37,6 +37,7 @@ private:
 
     std::unique_ptr<Stmt> parseBranchBody();
     Type parseArrayType(); 
+    std::pair<std::string, Qualifiers> resolveQualifiedName();
 
     std::unique_ptr<Stmt> parseScopeStmt();
     std::unique_ptr<Stmt> parseAssignStmt(std::unique_ptr<Expr> target);

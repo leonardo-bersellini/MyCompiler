@@ -67,6 +67,7 @@ enum class TokenType {
 
     Semicolon,  //;
     Colon,      //:
+    ColonColon, //::
     Comma,
     EndOfFile,
     Unknown,

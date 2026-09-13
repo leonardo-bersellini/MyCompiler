@@ -525,7 +525,8 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     // Variable Expression
     else if(auto s = dynamic_cast<const VariableExpr*>(expr))
     {
-        auto symbol = scopeStack.lookupSymbol(s->name);
+        auto symbol = lookupSymbol(s->qualifiers, s->name);
+
         if(!symbol) {
             errorLog->addError("undefined symbol: " + s->name);
             return ExprAnalysisResult(Type(PrimitiveType::Error));
@@ -600,8 +601,9 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
 
     // Function Call Expression
     else if(auto s = dynamic_cast<const CallExpr*>(expr))
-    {
-        auto symbol = scopeStack.lookupSymbol(s->name);
+    {   
+        auto symbol = lookupSymbol(s->qualifiers, s->name);
+
         if(!symbol) {
             errorLog->addError("undefined symbol: " + s->name);
             return ExprAnalysisResult(Type(PrimitiveType::Error));
@@ -714,6 +716,21 @@ bool SemanticAnalyzer::allPathsReturn(const Stmt* stmt) const
     }
 
     return false;
+}
+
+/*
+ * Funzione di lookup per i simboli nelle possibili tabelle.
+ * Questa funzione ritorna il simbolo relativo all'espressione analizzata, controllando
+ * nella tabella corretta (distinguendo tra nomi qualificati per la tabella namespace o
+ * nomi singoli per lo scopestack).
+ */
+
+std::optional<Symbol> SemanticAnalyzer::lookupSymbol(Qualifiers q, const std::string& name)
+{
+    if(q.empty()) {
+        return scopeStack.lookupSymbol(name);
+    }
+    return namespaceTable->searchQualifiedName(q, name);
 }
 
 

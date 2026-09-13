@@ -190,8 +190,14 @@ std::vector<Token> Lexer::analiseString(const std::string &string, ErrorLog &_er
             m_tokens.push_back(tsemi);
         }
         else if(c == ':') {
-            Token t = createToken(TokenType::Colon);
-            m_tokens.push_back(t);
+            if(peek(1) == ':') {
+                Token t = createToken(TokenType::ColonColon);
+                t.lexeme.push_back(advance());
+                m_tokens.push_back(t);
+            } else {
+                Token t = createToken(TokenType::Colon);
+                m_tokens.push_back(t);
+            }
         }
         else if(c == ',') {
             Token t = createToken(TokenType::Comma);

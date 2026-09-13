@@ -966,8 +966,21 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
     // Variable Expression
     else if(auto s = dynamic_cast<const VariableExpr*>(expr))
     {
-        llvm::Value *val = scopeStack.lookupSymbol(s->name).value();
-        Type type = getType(getAllocatedType(val));
+        llvm::Value *val = nullptr;
+        Type type;
+
+        if(!s->qualifiers.empty()) 
+        {
+            //variabile qualified, cerca direttamente nel module tramite nome qualified
+            std::string mangled = namespaceTable->mangleQualifiedName(s->qualifiers, s->name);
+            val = Module->getGlobalVariable(mangled);
+            type = getType(getAllocatedType(val));
+
+        } else {
+            //nome singolo, carca nello scope
+            val = scopeStack.lookupSymbol(s->name).value();
+            type = getType(getAllocatedType(val));
+        }
 
         if(type.isArray()) {
             // non si può eseguire un load singolo su un array
@@ -1022,9 +1035,17 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
     // Function Call Expression
     else if(auto s = dynamic_cast<const CallExpr*>(expr))
     {
-        std::string func_name = namespaceTable->mangleName(s->name);
+        std::string func_name;
+
+        if(!s->qualifiers.empty()) {
+            //nome qualified
+            func_name = namespaceTable->mangleQualifiedName(s->qualifiers, s->name);
+        } else {
+            func_name = namespaceTable->mangleName(s->name);
+        }
+        
         llvm::Function *callee = Module->getFunction(func_name);
-        if(!callee) return ExprGenResult{};
+        if(!callee) throw std::runtime_error("internal compiler error: function not found in module: " + func_name);
 
         std::vector<llvm::Value*> args;
         for(const std::unique_ptr<Expr> &arg : s->args) {
