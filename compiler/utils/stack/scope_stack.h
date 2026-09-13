@@ -32,6 +32,20 @@ public:
     }
 
     /*
+     * Ritorna un puntatore alla tabella interna, cercando tramite una key all'interno 
+     * dello stack interno. Ritorna nullptr se il simbolo non esiste.
+     */
+    const B* getSymbolPtr(const A& key) const {
+        for(int i = this->m_stack.size() - 1; i >= 0; i--) {
+            auto it = this->m_stack[i].find(key);
+            if(it != this->m_stack[i].end()) {
+                return &it->second;
+            }
+        }
+        return nullptr;
+    }
+
+    /*
      * Aggiunge un elemento vuoto come nuovo livello all'interno dello stack
      */
     void push() override {

@@ -126,6 +126,13 @@ public:
      */
     void push(const std::string& name) 
     {
+        // namespace già esistente (append)
+        if(auto got = getNamespace(name)) {
+            currentNamespace = got;
+            return;
+        }
+
+        // nuovo namespace
         if(!currentNamespace) {
             auto n = std::make_unique<Namespace>(name);
             currentNamespace = n.get();
@@ -133,20 +140,14 @@ public:
             return;
         }
 
-        const auto got = getNamespace(name);
+        // namespace annidato
+        auto n = std::make_unique<Namespace>(name);
+        n->parent = currentNamespace;
 
-        if(got) {
-            currentNamespace = got;
-        } else {
-            auto n = std::make_unique<Namespace>(name);
-            n->parent = currentNamespace;
+        Namespace* newNamespace = n.get();
 
-            Namespace* newNamespace = n.get();
-
-            currentNamespace->childs.insert({n->name, std::move(n)});
-
-            currentNamespace = newNamespace;
-        }
+        currentNamespace->childs.insert({n->name, std::move(n)});
+        currentNamespace = newNamespace;
 
         return;
     }

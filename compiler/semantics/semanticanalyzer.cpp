@@ -273,6 +273,9 @@ void SemanticAnalyzer::analyseFunction(const FunctionStmt* s)
     FunctionSymbol func{s->returnType, paramsType};
     scopeStack.declareSymbol(s->name, Symbol(func));
 
+    // prende per riferimento un elemento dalla tabella interna dello scopestack
+    currentFunction = &std::get<FunctionSymbol>(scopeStack.getSymbolPtr(s->name)->category);
+
     //scope locale alla funzione
     scopeStack.push();
 
@@ -280,8 +283,6 @@ void SemanticAnalyzer::analyseFunction(const FunctionStmt* s)
     for(const FunctionParam& p : s->params) {
         scopeStack.declareSymbol(p.name, Symbol(VariableSymbol(p.type, p.isConst)));
     }
-
-    currentFunction = &func;
 
     // ogni funzione non-void deve avere un return valido per ogni path
     if(!s->returnType.is(PrimitiveType::Void) && !allPathsReturn(s->body.get())) {
@@ -300,7 +301,7 @@ void SemanticAnalyzer::analyzeReturn(const ReturnStmt* s)
     if(currentFunction == nullptr) {
         errorLog->addError("return stmt fuori da una funzione");
         return;
-    }
+    } 
 
     if(currentFunction->returnType.is(PrimitiveType::Void) && s->value != nullptr) {
         errorLog->addError("returning a value in a function declared void");
