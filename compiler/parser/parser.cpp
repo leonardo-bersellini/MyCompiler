@@ -186,14 +186,9 @@ std::unique_ptr<Stmt> Parser::parseStatement()
         return std::make_unique<ContinueStmt>();
 
     } else {
-        // Assegnazione o Espressione
+        // Espressione
 
         auto expr = parseExpr();
-
-        if(check(TokenType::Equal)) {
-            return parseAssignStmt(std::move(expr));
-        }
-
         expect(TokenType::Semicolon);
 
         //ritorna uno stmt di espressione
@@ -345,38 +340,6 @@ std::pair<std::string, Qualifiers> Parser::resolveQualifiedName()
     result.second.pop_back();
 
     return result;
-}
-
-/*
- * Funzione di parsing degli stmt di assegnazione.
- * Caso diverso dall'assegnazione gestita in inizializzazione.
- */
-
-std::unique_ptr<Stmt> Parser::parseAssignStmt(std::unique_ptr<Expr> target)
-{
-    if(!target->isLValue()) {
-        errorLog->addError("could not resolve an assignment on an expression which is not an lvalue");
-        recoveryHandler.synchronize({TokenType::Semicolon});
-        return std::make_unique<ErrorStmt>();
-    }
-
-    // ricostruzione del nome letterale del target
-    std::string name;
-    if(auto varExpr = dynamic_cast<const VariableExpr*>(target.get())) {
-        name = varExpr->name;
-    }
-
-    advance();                          //consuma '='
-    auto expr = parseExpr();            //espressione rvalue
-
-    expect(TokenType::Semicolon, true);     //expect ; after
-
-    //ritorna uno stmt di assegnazione
-    auto stmt = std::make_unique<AssignmentStmt>();
-    stmt->target = std::move(target);
-    stmt->value = std::move(expr);
-    stmt->target_name = std::move(name);
-    return stmt;
 }
 
 /*
@@ -831,9 +794,45 @@ std::unique_ptr<Stmt> Parser::parseNamespaceStmt()
 
 std::unique_ptr<Expr> Parser::parseExpr()
 {
-    return parseLogicalOr();
+    return parseAssignment();
 }
 
+/*
+ * Si occupa del parsing di un assegnazione, con la precedenza più bassa.
+ * L'assegnazione è un espressione right-associative, ovvero associa operazioni da
+ * destra a sinistra.
+ */
+
+std::unique_ptr<Expr> Parser::parseAssignment()
+{
+    auto target = parseLogicalOr();
+
+    if(check(TokenType::Equal))
+    {
+        if(!target->isLValue()) {
+            errorLog->addError("could not resolve an assignment on an expression which is not an lvalue");
+            recoveryHandler.synchronize({TokenType::Semicolon});
+            return std::make_unique<ErrorExpr>();
+        }
+
+        advance(); //consuma '='
+        auto value = parseAssignment(); //right-associative
+
+        // ricostruzione del nome letterale del target
+        std::string name;
+        if(auto varExpr = dynamic_cast<const VariableExpr*>(target.get())) {
+            name = varExpr->name;
+        }
+
+        auto assign = std::make_unique<AssignmentExpr>();
+        assign->target_name = std::move(name);
+        assign->target = std::move(target);
+        assign->value = std::move(value);
+        return assign;
+    }
+
+    return target;
+}
 
 /*
  * Punto di ingresso delle funzioni di parsing per operatori logici.

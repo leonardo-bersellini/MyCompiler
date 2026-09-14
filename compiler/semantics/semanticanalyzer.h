@@ -42,7 +42,6 @@ private:
     void analyzeStmt(const Stmt* stmt);
 
     void analyzeBlockStmt(const BlockStmt* block);
-    void analyzeAssignment(const AssignmentStmt* s);
     void analyzeDeclaration(const DeclarationStmt* s);
     void analyseFunction(const FunctionStmt* s);
     void analyzeReturn(const ReturnStmt* s);

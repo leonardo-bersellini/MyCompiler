@@ -44,6 +44,15 @@ public:
     bool isLValue() const override { return false; }
 };
 
+class AssignmentExpr : public Expr {
+public:
+    std::string target_name; //nome letterale del target (cache)
+    std::unique_ptr<Expr> target;  //target = value
+    std::unique_ptr<Expr> value;
+
+    bool isLValue() const override { return false; }
+};
+
 class VariableExpr : public Expr {
 public:
     std::string name;
@@ -106,13 +115,6 @@ public:
 class Stmt {
 public:
     virtual ~Stmt() = default;
-};
-
-class AssignmentStmt : public Stmt {
-public:
-    std::string target_name; //nome letterale del target
-    std::unique_ptr<Expr> target;  //target = value
-    std::unique_ptr<Expr> value;
 };
 
 class ExpressionStmt : public Stmt {
@@ -244,6 +246,11 @@ inline void printAST(const Expr* node, int depth = 0) {
     else if (auto n = dynamic_cast<const BooleanExpr*>(node)) {
         std::cout << indent << "BooleanExpr:" << (n->value ? "true" : "false") << std::endl;
     }
+    else if (auto n = dynamic_cast<const AssignmentExpr*>(node)) {
+        std::cout << indent << "AssignmentExpr:" << n->target_name << std::endl;
+        printAST(n->target.get(), depth +1);
+        printAST(n->value.get(), depth +1);
+    }
     else if (auto n = dynamic_cast<const VariableExpr*>(node)) {
         std::cout << indent << "VariableExpr:" << n->name << std::endl;
     }
@@ -296,13 +303,7 @@ inline void printStmt(const Stmt* stmt, int depth = 0)
 
     std::string indent(depth * 2, ' ');
 
-    if (auto s = dynamic_cast<const AssignmentStmt*>(stmt)) {
-
-        std::cout << indent << "AssignmentStmt:" << s->target_name << std::endl;
-        printAST(s->value.get(), depth + 1);
-    }
-
-    else if (auto s = dynamic_cast<const ExpressionStmt*>(stmt)) {
+    if (auto s = dynamic_cast<const ExpressionStmt*>(stmt)) {
 
         std::cout << indent << "ExpressionStmt" << std::endl;
         printAST(s->expr.get(), depth + 1);

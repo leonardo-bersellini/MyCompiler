@@ -435,12 +435,6 @@ void CodeGenerator::generateStmt(const Stmt *stmt)
         generateDeclarationStmt(s); 
     }
 
-    // Assegnazione
-    else if(auto s = dynamic_cast<const AssignmentStmt*>(stmt))
-    {
-        generateAssignStmt(s); 
-    }
-
     // Espressione
     else if(auto s = dynamic_cast<const ExpressionStmt*>(stmt))
     {
@@ -518,34 +512,6 @@ void CodeGenerator::generateScopeStmt(const BlockStmt *st)
     }
 
     scopeStack.pop();
-}
-
-void CodeGenerator::generateAssignStmt(const AssignmentStmt *st)
-{
-    auto symbol = generateLValueAddress(st->target.get());
-    Type symbolType = getType(getAllocatedType(symbol));
-
-    if(symbolType.isArray()) 
-    {
-        if(auto arrLit = dynamic_cast<const LiteralArrayExpr*>(st->value.get())) {
-            generateArrayAssignment(arrLit, symbol);
-        } else {
-            // assegnazione di un array ad un altro: arr1 = arr2;
-            auto varExpr = dynamic_cast<const VariableExpr*>(st->value.get());
-            llvm::Value* source = scopeStack.lookupSymbol(varExpr->name).value();
-
-            llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(getAllocatedType(symbol));
-            llvm::Type* elementType = arrType->getElementType();
-
-            copyArrayElements(source, symbol, arrType, elementType);
-        }
-    } else {
-        auto value = generateExpr(st->value.get());
-        // conversione dal tipo del valore al tipo della variabile
-        auto casted = castValue(value.llvm_value, value.type.asPrimitive(), getType(getAllocatedType(symbol)).asPrimitive());
-
-        Builder.CreateStore(casted, symbol);
-    }
 }
 
 void CodeGenerator::generateDeclarationStmt(const DeclarationStmt *st)
@@ -961,6 +927,46 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
             llvm::ConstantInt::get(llvm::Type::getInt1Ty(Context), s->value),
             PrimitiveType::Bool
         };
+    }
+
+    // Assign Expr
+    else if(auto s = dynamic_cast<const AssignmentExpr*>(expr))
+    {
+        auto symbol = generateLValueAddress(s->target.get());
+        Type symbolType = getType(getAllocatedType(symbol));
+
+        if(symbolType.isArray()) 
+        {
+            if(auto arrLit = dynamic_cast<const LiteralArrayExpr*>(s->value.get())) {
+                generateArrayAssignment(arrLit, symbol);
+            } else {
+                // assegnazione di un array ad un altro: arr1 = arr2;
+                auto varExpr = dynamic_cast<const VariableExpr*>(s->value.get());
+                
+                llvm::Value* source = nullptr;
+                if (!varExpr->qualifiers.empty()) {
+                    std::string mangled = namespaceTable->mangleQualifiedName(varExpr->qualifiers, varExpr->name);
+                    source = Module->getGlobalVariable(mangled);
+                } else {
+                    source = scopeStack.lookupSymbol(varExpr->name).value();
+                }
+
+                llvm::ArrayType* arrType = llvm::cast<llvm::ArrayType>(getAllocatedType(symbol));
+                llvm::Type* elementType = arrType->getElementType();
+
+                copyArrayElements(source, symbol, arrType, elementType);
+            }
+            return ExprGenResult{symbol, symbolType};
+
+        } else {
+            auto value = generateExpr(s->value.get());
+            // conversione dal tipo del valore al tipo della variabile
+            auto casted = castValue(value.llvm_value, value.type.asPrimitive(), getType(getAllocatedType(symbol)).asPrimitive());
+
+            Builder.CreateStore(casted, symbol);
+
+            return ExprGenResult{casted, symbolType};
+        }
     }
 
     // Variable Expression

@@ -70,7 +70,6 @@ private:
     void generateStmt(const Stmt* stmt);
 
     void generateScopeStmt(const BlockStmt* st);
-    void generateAssignStmt(const AssignmentStmt* st);
     void generateDeclarationStmt(const DeclarationStmt* st);
     void generateFunctionStmt(const FunctionStmt* st);
     void generateReturnStmt(const ReturnStmt* st);

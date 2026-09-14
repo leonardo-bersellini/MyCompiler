@@ -76,12 +76,6 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
         analyzeBlockStmt(s);
     }
 
-    // Assegnazione
-    else if(auto s = dynamic_cast<const AssignmentStmt*>(stmt))
-    {
-        analyzeAssignment(s);
-    }
-
     // Espressione
     else if(auto s = dynamic_cast<const ExpressionStmt*>(stmt))
     {
@@ -182,27 +176,6 @@ void SemanticAnalyzer::analyzeBlockStmt(const BlockStmt* block)
     }
 
     scopeStack.pop(); //chiude lo scope corrente
-}
-
-void SemanticAnalyzer::analyzeAssignment(const AssignmentStmt* s) 
-{
-    ExprAnalysisResult targetResult = analyzeExpr(s->target.get());
-    ExprAnalysisResult valueResult = analyzeExpr(s->value.get());
-
-    if (!types::isAssignmentCompatible(targetResult.type, valueResult.type)) {
-        errorLog->addError("tipo incompatibile nell'assegnazione a " + s->target_name + "  " +
-                           "[confronto tra " + types::toString(targetResult.type) + " e " 
-                           + types::toString(valueResult.type) + "]");
-        return;
-    }
-
-    if(auto varExpr = dynamic_cast<const VariableExpr*>(s->target.get()))
-    {
-        if(scopeStack.symbolExistsAnywhere(varExpr->name) && targetResult.isConst) {
-            errorLog->addError("forbidden assignment of const variable '" + varExpr->name + "'");
-            return;
-        }
-    }
 }
 
 void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
@@ -520,6 +493,30 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
         ExprAnalysisResult result;
         result.type = Type(PrimitiveType::Bool);
         return result;
+    }
+
+    // Assign Expr
+    else if(auto s = dynamic_cast<const AssignmentExpr*>(expr))
+    { 
+        ExprAnalysisResult targetResult = analyzeExpr(s->target.get());
+        ExprAnalysisResult valueResult = analyzeExpr(s->value.get());
+
+        if(!types::isAssignmentCompatible(targetResult.type, valueResult.type)) {
+            errorLog->addError("tipo incompatibile nell'assegnazione a " + s->target_name + "  " +
+                            "[confronto tra " + types::toString(targetResult.type) + " e " 
+                            + types::toString(valueResult.type) + "]");
+            return ExprAnalysisResult(Type(PrimitiveType::Error));
+        }
+
+        if(auto varExpr = dynamic_cast<const VariableExpr*>(s->target.get()))
+        {
+            if(targetResult.isConst) {
+                errorLog->addError("forbidden assignment of const variable '" + varExpr->name + "'");
+                return ExprAnalysisResult(Type(PrimitiveType::Error));
+            }
+        }
+
+        return targetResult;
     }
 
     // Variable Expression

@@ -22,9 +22,19 @@ each written as `field_name:` followed by its value.
 
  ---
 
+ **V 1.9.1** &ensp; <@leonardo-bersellini> &emsp; 14 . 09 . 2026
+
+ `commit:` Refactored Assignment Stmt *-o- ()*
+ <br>
+ `scope:` All
+ <br>
+ `features:` refactored AssignStmt to AssignExpr
+
+ ---
+
  **V 1.9.0** &ensp; <@leonardo-bersellini> &emsp; 13 . 09 . 2026
 
- `commit:` Qualified Names *-o- ()*
+ `commit:` Qualified Names *-o- (df5cc18)*
  <br>
  `scope:` All
  <br>

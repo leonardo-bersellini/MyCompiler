@@ -40,7 +40,6 @@ private:
     std::pair<std::string, Qualifiers> resolveQualifiedName();
 
     std::unique_ptr<Stmt> parseScopeStmt();
-    std::unique_ptr<Stmt> parseAssignStmt(std::unique_ptr<Expr> target);
     std::unique_ptr<Stmt> parseDeclarationStmt(bool isConstDeclaration = false);
     std::unique_ptr<Stmt> parseFunctionStmt();
     std::unique_ptr<Stmt> parseReturnStmt();
@@ -54,6 +53,8 @@ private:
     std::unique_ptr<DefaultStmt> parseDefaultStmt();
 
     std::unique_ptr<Expr> parseExpr();
+
+    std::unique_ptr<Expr> parseAssignment();
 
     std::unique_ptr<Expr> parseLogicalOr();
     std::unique_ptr<Expr> parseLogicalAnd();

@@ -62,7 +62,7 @@ TEST_CASE("Parser distingue dichiarazione e funzione partendo dallo stesso TypeK
     REQUIRE(dynamic_cast<BlockStmt*>(fn->body.get()) != nullptr);
 }
 
-TEST_CASE("Parser costruisce correttamente un AssignmentStmt", "[parser]")
+TEST_CASE("Parser costruisce correttamente un AssignmentExpr", "[parser]")
 {
     ErrorLog errorLog;
 
@@ -70,7 +70,9 @@ TEST_CASE("Parser costruisce correttamente un AssignmentStmt", "[parser]")
     auto fn = dynamic_cast<FunctionStmt*>(program->statements[0].get());
     auto body = dynamic_cast<BlockStmt*>(fn->body.get());
 
-    auto assign = dynamic_cast<AssignmentStmt*>(body->statements[0].get());
+    auto expr = dynamic_cast<ExpressionStmt*>(body->statements[0].get());
+    auto assign = dynamic_cast<AssignmentExpr*>(expr->expr.get());
+    
     REQUIRE(assign != nullptr);
     REQUIRE(assign->target_name == "x");
     REQUIRE(dynamic_cast<NumberExpr*>(assign->value.get()) != nullptr);
