@@ -51,6 +51,8 @@ inline const std::vector<UtilityFlag> utilityFlags = {
     { {"Vb", "verbose"}, "Show detailed information during the execution.", &CompilerOptions::verbose},
     { {"no-generation"}, "Execute the compiler process without generating any file as output", &CompilerOptions::noOutputFile},
     { {"Wh", "hide-warnings"}, "Hide all the warnings collected during execution", &CompilerOptions::hideWarnings},
+    { {"no-ansi"}, "Disable ansi mode for console output", &CompilerOptions::disableAnsiMode },
+
 };
 
 

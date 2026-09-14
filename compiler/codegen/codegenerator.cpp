@@ -66,7 +66,7 @@ void CodeGenerator::buildTargetObj(const std::string& target_path, bool debug)
     auto TargetTriple = llvm::sys::getDefaultTargetTriple();
 
     if (llvm::verifyModule(*Module, &llvm::errs())) {
-        llvm::errs() << clr::red << "Modulo LLVM invalido\n" << clr::reset;
+        llvm::errs() << (clr::red + "Modulo LLVM invalido\n" + clr::reset);
         return;
     }
     Module->setTargetTriple(TargetTriple);
@@ -76,7 +76,7 @@ void CodeGenerator::buildTargetObj(const std::string& target_path, bool debug)
     auto Target = llvm::TargetRegistry::lookupTarget(TargetTriple, Error);
 
     if (!Target) {
-        llvm::errs() << clr::red << Error << clr::reset;
+        llvm::errs() << (clr::red + Error + clr::reset);
         return;
     }
 
@@ -85,7 +85,7 @@ void CodeGenerator::buildTargetObj(const std::string& target_path, bool debug)
 
     auto TargetMachine = Target->createTargetMachine(TargetTriple, "x86-64", "", opt, RM);
     if (!TargetMachine) {
-        llvm::errs() << clr::red << "Impossibile creare TargetMachine\n" << clr::reset;
+        llvm::errs() << (clr::red + "Impossibile creare TargetMachine\n" + clr::reset);
         return;
     }
 
@@ -105,7 +105,7 @@ void CodeGenerator::buildTargetObj(const std::string& target_path, bool debug)
 
     if (TargetMachine->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile))
     {
-        llvm::errs() << clr::red << "Cannot emit object file\n" << clr::reset;
+        llvm::errs() << (clr::red + "Cannot emit object file\n" + clr::reset);
         return;
     }
 

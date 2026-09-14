@@ -301,6 +301,11 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
     analyzer.assignNamespaceTable(namespaceTable);
     codegen.assignNamespaceTable(namespaceTable);
 
+    // opzione disable ansi 
+    if(options.disableAnsiMode) {
+        ansi::disableAnsi();
+    }
+
     // Lettura e parsing del codice, indipendente dai flags
     const std::vector<Token> tokens = lexer.analiseString(source, errorLog);
 

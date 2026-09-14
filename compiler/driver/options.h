@@ -28,6 +28,7 @@ struct CompilerOptions
     bool verbose = false;
     bool noOutputFile = false;
     bool hideWarnings = false;
+    bool disableAnsiMode = false;
 };
 
 #endif // OPTIONS_H

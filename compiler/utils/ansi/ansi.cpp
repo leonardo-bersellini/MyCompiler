@@ -10,4 +10,11 @@ void ansi::enableAnsi()
     GetConsoleMode(hOut, &dwMode);
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     SetConsoleMode(hOut, dwMode);
+
+    ansi_enabled = true;
+}
+
+void ansi::disableAnsi()
+{
+    ansi_enabled = false;
 }
