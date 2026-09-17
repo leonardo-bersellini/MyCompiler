@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(MyCompiler 
-    VERSION 1.9.2
+    VERSION 1.9.4
     LANGUAGES CXX
     DESCRIPTION "Bismuth: compilatore sviluppato in C++ e LLVM"
 )
@@ -39,7 +39,8 @@ add_library(BismuthCore STATIC
 
   compiler/codegen/codegenerator.cpp 
   compiler/codegen/codegenerator.h 
-  compiler/codegen/codegen_scopestack.h
+  compiler/codegen/stacks/codegen_scopestack.h
+  compiler/codegen/stacks/loop_stack.h
   
   compiler/constants/AbstractSintaxTree.h 
   compiler/constants/keywords.h 

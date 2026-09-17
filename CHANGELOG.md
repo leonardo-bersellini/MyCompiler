@@ -29,6 +29,16 @@ each written as `field_name:` followed by its value.
  
  ### Bismuth Versions
 
+---
+
+ **V 1.9.4** &ensp; <@leonardo-bersellini> &emsp; 17 . 09 . 2026
+
+ `commit:` Implemented Break and Continue Instructions *-o- ()* 
+ <br>
+ `scope:`  Codegen
+ <br>
+ `features:` finished continue and break implementeation at codegen level
+
  ---
 
  **V 1.9.2** &ensp; <@leonardo-bersellini> &emsp; 14 . 09 . 2026

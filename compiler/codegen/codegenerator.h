@@ -21,7 +21,8 @@
 
 #include "AbstractSintaxTree.h"
 
-#include "codegen_scopestack.h"
+#include "stacks/codegen_scopestack.h"
+#include "stacks/loop_stack.h"
 
 #include "utils/namespace/namespace.h"
 
@@ -55,6 +56,9 @@ private:
     //tabella namespace condivisa
     NamespaceTable* namespaceTable;
 
+    //stack per loopcontext
+    LoopStack loopStack;
+
     llvm::Type* getLLVMType(const Type &type);
     Type getType(llvm::Type *type);
     llvm::Constant* getDefaultValue(const Type& type);
@@ -66,7 +70,6 @@ private:
     void copyArrayElements(llvm::Value* source, llvm::Value* destination, llvm::ArrayType* arrType, llvm::Type* elementType);
     void generateArrayAssignment(const LiteralArrayExpr* arrLit, llvm::Value* destination);
     
-
     void generateStmt(const Stmt* stmt);
 
     void generateScopeStmt(const BlockStmt* st);

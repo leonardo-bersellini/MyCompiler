@@ -17,8 +17,8 @@ inline const std::unordered_map<std::string, TokenType> keywords = {
     {"elif", TokenType::ElifKeyword},
     {"for", TokenType::ForKeyword},
     {"while", TokenType::WhileKeyword},
-    // {"break", TokenType::BreakKeyword}, // disabilitato nel codegen
-    // {"continue", TokenType::ContinueKeyword}, // disabilitato nel codegen
+    {"break", TokenType::BreakKeyword}, 
+    {"continue", TokenType::ContinueKeyword},
     {"void", TokenType::VoidKeyword},
     {"return", TokenType::ReturnKeyword},
     {"switch", TokenType::SwitchKeyword},

@@ -489,6 +489,31 @@ void CodeGenerator::generateStmt(const Stmt *stmt)
         generateNamespaceStmt(s);
     }
 
+    // Break Stmt
+    else if(auto s = dynamic_cast<const BreakStmt*>(stmt))
+    {
+        //sposta l'insert point nel blocco break attuale
+
+        llvm::Function* function = Builder.GetInsertBlock()->getParent();
+        Builder.CreateBr(loopStack.back().breakTarget);
+
+        llvm::BasicBlock* deadBB = llvm::BasicBlock::Create(Context, "after.break", function);
+        Builder.SetInsertPoint(deadBB);
+    }
+
+    // Continue Stmt
+    else if(auto s = dynamic_cast<const ContinueStmt*>(stmt))
+    {
+        //sposta l'insert point nel blocco continue attuale
+
+        llvm::Function* function = Builder.GetInsertBlock()->getParent();
+
+        Builder.CreateBr(loopStack.back().continueTarget);
+
+        llvm::BasicBlock* deadBB = llvm::BasicBlock::Create(Context, "after.continue", function);
+        Builder.SetInsertPoint(deadBB);
+    }
+
     return;
 }
 
@@ -711,6 +736,9 @@ void CodeGenerator::generateForStmt(const ForStmt *st)
     llvm::BasicBlock* updateBB = llvm::BasicBlock::Create(Context, "for.update", function);
     llvm::BasicBlock* afterBB = llvm::BasicBlock::Create(Context, "for.end", function);
 
+    //popola lo stack dei loopcontext
+    loopStack.push_back(LoopContext(afterBB, updateBB));
+
     //entra nel controllo della condizione
     Builder.CreateBr(condBB);
     Builder.SetInsertPoint(condBB);
@@ -743,6 +771,7 @@ void CodeGenerator::generateForStmt(const ForStmt *st)
 
     Builder.SetInsertPoint(afterBB);
 
+    loopStack.pop_back();
     scopeStack.pop();
 }
 
@@ -761,6 +790,8 @@ void CodeGenerator::generateWhileStmt(const WhileStmt *st)
     llvm::BasicBlock *bodyBB = llvm::BasicBlock::Create(Context, "wbody", function);
     llvm::BasicBlock *afterBB = llvm::BasicBlock::Create(Context, "wend", function);
 
+    loopStack.push_back(LoopContext(afterBB, condBB));
+
     //creazione condition branch
     Builder.CreateCondBr(condition, bodyBB, afterBB);
 
@@ -769,6 +800,8 @@ void CodeGenerator::generateWhileStmt(const WhileStmt *st)
     if(st->body) {
         generateStmt(st->body.get());
     }
+
+    loopStack.pop_back();
 
     if (!Builder.GetInsertBlock()->getTerminator()) {
         Builder.CreateBr(condBB);

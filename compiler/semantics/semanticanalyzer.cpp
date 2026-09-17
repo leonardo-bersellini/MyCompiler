@@ -142,7 +142,7 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
     else if(dynamic_cast<const BreakStmt*>(stmt))
     {
         if(loopDepth == 0) {
-            errorLog->addError("break fuori da un ciclo");
+            errorLog->addError("invalid break stmt inside current scope [-InvalidBreakContext]");
         }
     }
 
@@ -150,7 +150,7 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
     else if(dynamic_cast<const ContinueStmt*>(stmt))
     {
         if(loopDepth == 0) {
-            errorLog->addError("continue fuori da un ciclo");
+            errorLog->addError("invalid continue stmt inside current scope [-InvalidContinueContext]");
         }
     }
 
