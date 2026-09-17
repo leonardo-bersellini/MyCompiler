@@ -2,7 +2,16 @@
 
  This file keeps track of all the main changes for every version of the bismuth compiler project.
 
- > **Note:** early version numbers in this changelog were not assigned following
+ ### Versioning rules
+
+ Every bismuth version follow the same common pattern, `V x.x.x`.
+ As for most of versioning models, the first number is the version major, the second one is the version minor and the last one is the debug patch.
+  - The version-major number is bumped only for important changes that refactor, delete or add new modules or stepts in the compiling chain (not "only" for changes that makes a part program incompatible).
+  - The version-minor number is bumped for every new feature or implements an older one, adding something to the project capabilities.
+  - The debug patch is bumped not only for debug actions and fixes, but also for changes that does not add a new feature to the compiler but still modifies and improves old code. It would be an example a reorganization of the code that just make the project cleaner, but does not fix or add anithing.
+
+
+> **Note:** early version numbers in this changelog were not assigned following
 > correct semantic versioning rules. Version numbers here have been retroactively
 > corrected and may not match the version referenced in the original commit —
 > for versions below 1.7.0, this changelog should be treated as the source of truth.
@@ -24,9 +33,9 @@ each written as `field_name:` followed by its value.
 
  **V 1.9.2** &ensp; <@leonardo-bersellini> &emsp; 14 . 09 . 2026
 
- `commit:` Made Ansi output conditional *-o- ()*
+ `commit:` Made Ansi output conditional *-o- (7a6dd0e)* 
  <br>
- `scope:` Utility: ansi
+ `scope:`  Utility: ansi
  <br>
  `features:` added new --no-ansi option for conditional ansi colors
 
@@ -294,8 +303,8 @@ each written as `field_name:` followed by its value.
 
  **V 0.1.0**  &ensp; <@leonardo-bersellini> &emsp; 20 . 07 . 2026
  
- `commit:` Linker *-o- (09a75da)*
+ `commit:`   Linker *-o- (09a75da)*
  <br>
- `scope:` Codegen
+ `scope:`    Codegen
  <br>
  `features:` implemented a linker for executable files generation

@@ -165,7 +165,6 @@ tests/
 └── test_***.cpp
 
 third-party/
-├── mingw/
 └── lld-libs/
 ```
 
@@ -174,7 +173,7 @@ third-party/
 <prefix>/
 bin/            
 ├── bismuth.exe             # the compiler executable 
-|                           # there will also be included mingw runtime dlls
+| 
 ├── lld-link.exe
 └── libs/                   # lld dependencies
     └── lib files (.a, .dll, .o)  
