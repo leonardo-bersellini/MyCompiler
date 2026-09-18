@@ -56,6 +56,12 @@ private:
 
     ExprAnalysisResult analyzeExpr(const Expr* expr);
 
+    ExprAnalysisResult analyzeAssignmentExpr(const AssignmentExpr* s);
+    ExprAnalysisResult analyzeVariableExpr(const VariableExpr* s);
+    ExprAnalysisResult analyzeArrayAccessExpr(const ArrayAccessExpr* s);
+    ExprAnalysisResult analyzeLiteralArrayExpr(const LiteralArrayExpr* s);
+    ExprAnalysisResult analyzeCallExpr(const CallExpr* s);
+    ExprAnalysisResult analyzeUnaryExpr(const UnaryExpr* s);
     ExprAnalysisResult analyzeBinaryOperation(const BinaryExpr* expr);
 
     bool allPathsReturn(const Stmt* stmt) const;

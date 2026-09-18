@@ -498,138 +498,31 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     // Assign Expr
     else if(auto s = dynamic_cast<const AssignmentExpr*>(expr))
     { 
-        ExprAnalysisResult targetResult = analyzeExpr(s->target.get());
-        ExprAnalysisResult valueResult = analyzeExpr(s->value.get());
-
-        if(!types::isAssignmentCompatible(targetResult.type, valueResult.type)) {
-            errorLog->addError("tipo incompatibile nell'assegnazione a " + s->target_name + "  " +
-                            "[confronto tra " + types::toString(targetResult.type) + " e " 
-                            + types::toString(valueResult.type) + "]");
-            return ExprAnalysisResult(Type(PrimitiveType::Error));
-        }
-
-        if(auto varExpr = dynamic_cast<const VariableExpr*>(s->target.get()))
-        {
-            if(targetResult.isConst) {
-                errorLog->addError("forbidden assignment of const variable '" + varExpr->name + "'");
-                return ExprAnalysisResult(Type(PrimitiveType::Error));
-            }
-        }
-
-        return targetResult;
+        return analyzeAssignmentExpr(s);
     }
 
     // Variable Expression
     else if(auto s = dynamic_cast<const VariableExpr*>(expr))
     {
-        auto symbol = lookupSymbol(s->qualifiers, s->name);
-
-        if(!symbol) {
-            errorLog->addError("undefined symbol: " + s->name);
-            return ExprAnalysisResult(Type(PrimitiveType::Error));
-        }
-
-        return std::visit(SymbolVisitor{
-            [] (const VariableSymbol& v) 
-            {
-                return ExprAnalysisResult(v.type, v.isConst);
-            },
-            [&] (const FunctionSymbol& f) {
-                errorLog->addError("'" + s->name + "' is a function, cannot be used as a variable");
-                return ExprAnalysisResult(Type(PrimitiveType::Error));
-            }
-        }, symbol->category);
+        return analyzeVariableExpr(s);
     }
 
     //Array access Expression
     else if(auto s = dynamic_cast<const ArrayAccessExpr*>(expr))
     {
-        auto baseResult = analyzeExpr(s->base.get());
-        auto indexResult = analyzeExpr(s->index.get());
-
-        if(baseResult.type.isError()) {
-            return ExprAnalysisResult{Type(PrimitiveType::Error)};
-        }
-
-        if(!baseResult.type.isArray()) {
-            errorLog->addError("indexing a non-array type (" + types::toString(baseResult.type) + ")");
-            return ExprAnalysisResult{Type(PrimitiveType::Error)};
-        }
-
-        if(!indexResult.type.is(PrimitiveType::Int)) {
-            errorLog->addError("array index must be of type integer");
-        }
-
-        PrimitiveType elementType = std::get<ArrayType>(baseResult.type.category).elementType;
-
-        return ExprAnalysisResult(Type(elementType), baseResult.isConst);
+        return analyzeArrayAccessExpr(s);
     }
 
     //Array literal Expression
     else if(auto s = dynamic_cast<const LiteralArrayExpr*>(expr))
     {
-        if(s->elements.empty()) {
-            errorLog->addError("could not convert empty enclosed-bracket to an array");
-            return ExprAnalysisResult{Type(PrimitiveType::Error)};
-        }
-
-        auto arrayType = analyzeExpr(s->elements.at(0).get()).type;
-
-        for(int i=1; i < s->elements.size(); ++i)
-        {
-            auto type = analyzeExpr(s->elements.at(i).get()).type;
-
-            if(type.asPrimitive() != arrayType.asPrimitive()) {
-                errorLog->addError("incompatible element of type " + types::toString(type) +
-                                    " in literal array of type " + types::toString(arrayType) + 
-                                    " at index " + std::to_string(i));
-                return ExprAnalysisResult{Type(PrimitiveType::Error)};
-            }
-        }
-
-        auto elementType = arrayType.asPrimitive();
-        ArrayType arr(elementType, s->elements.size());
-
-        //salva il valore ricostruito nell'espressione
-        s->type = arr; 
-
-        return ExprAnalysisResult{Type{arr}};
+        return analyzeLiteralArrayExpr(s);
     }
 
     // Function Call Expression
     else if(auto s = dynamic_cast<const CallExpr*>(expr))
     {   
-        auto symbol = lookupSymbol(s->qualifiers, s->name);
-
-        if(!symbol) {
-            errorLog->addError("undefined symbol: " + s->name);
-            return ExprAnalysisResult(Type(PrimitiveType::Error));
-        }
-
-        return std::visit(SymbolVisitor{
-            [&](const FunctionSymbol& f) 
-            {
-                if(s->args.size() != f.paramTypes.size()) {
-                    errorLog->addError("called function '" + s->name + "()" + "' required a different number of parameters than provided");
-                    return ExprAnalysisResult(Type(PrimitiveType::Error));
-                }
-
-                for(int i=0; i < s->args.size(); ++i) {
-                    auto res = analyzeExpr(s->args.at(i).get());
-
-                    if(!types::isAssignmentCompatible(f.paramTypes.at(i), res.type)) {
-                        errorLog->addError("incopatible parameter type in function call to " + s->name);
-                        return ExprAnalysisResult(Type(PrimitiveType::Error));
-                    }
-                }
-
-                return ExprAnalysisResult{f.returnType};
-            },
-            [&](const VariableSymbol& v) {
-                errorLog->addError("'" + s->name + "' is not a function, cannot be called");
-                return ExprAnalysisResult(Type(PrimitiveType::Error));
-            },
-        }, symbol->category);
+        return analyzeCallExpr(s);
     }
 
     // Binary Expression
@@ -641,17 +534,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     // Unary Expression
     else if(auto s = dynamic_cast<const UnaryExpr*>(expr))
     {
-        //recursive call
-        ExprAnalysisResult operandResult = analyzeExpr(s->operand.get());
-
-        Type resultType = Type(types::unaryResultType(s->op, operandResult.type.asPrimitive()));
-
-        if (resultType.is(PrimitiveType::Error) && !operandResult.type.is(PrimitiveType::Error)) {
-            errorLog->addError("operatore unario non valido per il tipo " +
-                               types::toString(operandResult.type));
-        }
-
-        return ExprAnalysisResult{resultType};
+        return analyzeUnaryExpr(s);
     }
 
     // Error Expression
@@ -663,6 +546,153 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
     }
 
     return ExprAnalysisResult{};
+}
+
+ExprAnalysisResult SemanticAnalyzer::analyzeAssignmentExpr(const AssignmentExpr* s)
+{
+    ExprAnalysisResult targetResult = analyzeExpr(s->target.get());
+    ExprAnalysisResult valueResult = analyzeExpr(s->value.get());
+
+    if(!types::isAssignmentCompatible(targetResult.type, valueResult.type)) {
+        errorLog->addError("tipo incompatibile nell'assegnazione a " + s->target_name + "  " +
+                        "[confronto tra " + types::toString(targetResult.type) + " e " 
+                        + types::toString(valueResult.type) + "]");
+        return ExprAnalysisResult(Type(PrimitiveType::Error));
+    }
+
+    if(auto varExpr = dynamic_cast<const VariableExpr*>(s->target.get()))
+    {
+        if(targetResult.isConst) {
+            errorLog->addError("forbidden assignment of const variable '" + varExpr->name + "'");
+            return ExprAnalysisResult(Type(PrimitiveType::Error));
+        }
+    }
+
+    return targetResult;
+}
+
+ExprAnalysisResult SemanticAnalyzer::analyzeVariableExpr(const VariableExpr* s)
+{
+    auto symbol = lookupSymbol(s->qualifiers, s->name);
+
+    if(!symbol) {
+        errorLog->addError("undefined symbol: " + s->name);
+        return ExprAnalysisResult(Type(PrimitiveType::Error));
+    }
+
+    return std::visit(SymbolVisitor{
+        [] (const VariableSymbol& v) 
+        {
+            return ExprAnalysisResult(v.type, v.isConst);
+        },
+        [&] (const FunctionSymbol& f) {
+            errorLog->addError("'" + s->name + "' is a function, cannot be used as a variable");
+            return ExprAnalysisResult(Type(PrimitiveType::Error));
+        }
+    }, symbol->category);
+}
+
+ExprAnalysisResult SemanticAnalyzer::analyzeArrayAccessExpr(const ArrayAccessExpr* s)
+{
+    auto baseResult = analyzeExpr(s->base.get());
+    auto indexResult = analyzeExpr(s->index.get());
+
+    if(baseResult.type.isError()) {
+        return ExprAnalysisResult{Type(PrimitiveType::Error)};
+    }
+
+    if(!baseResult.type.isArray()) {
+        errorLog->addError("indexing a non-array type (" + types::toString(baseResult.type) + ")");
+        return ExprAnalysisResult{Type(PrimitiveType::Error)};
+    }
+
+    if(!indexResult.type.is(PrimitiveType::Int)) {
+        errorLog->addError("array index must be of type integer");
+    }
+
+    PrimitiveType elementType = std::get<ArrayType>(baseResult.type.category).elementType;
+
+    return ExprAnalysisResult(Type(elementType), baseResult.isConst);
+}
+
+ExprAnalysisResult SemanticAnalyzer::analyzeLiteralArrayExpr(const LiteralArrayExpr* s)
+{
+    if(s->elements.empty()) {
+        errorLog->addError("could not convert empty enclosed-bracket to an array");
+        return ExprAnalysisResult{Type(PrimitiveType::Error)};
+    }
+
+    auto arrayType = analyzeExpr(s->elements.at(0).get()).type;
+
+    for(int i=1; i < s->elements.size(); ++i)
+    {
+        auto type = analyzeExpr(s->elements.at(i).get()).type;
+
+        if(type.asPrimitive() != arrayType.asPrimitive()) {
+            errorLog->addError("incompatible element of type " + types::toString(type) +
+                                " in literal array of type " + types::toString(arrayType) + 
+                                " at index " + std::to_string(i));
+            return ExprAnalysisResult{Type(PrimitiveType::Error)};
+        }
+    }
+
+    auto elementType = arrayType.asPrimitive();
+    ArrayType arr(elementType, s->elements.size());
+
+    //salva il valore ricostruito nell'espressione
+    s->type = arr; 
+
+    return ExprAnalysisResult{Type{arr}};
+}
+
+ExprAnalysisResult SemanticAnalyzer::analyzeCallExpr(const CallExpr* s)
+{
+    auto symbol = lookupSymbol(s->qualifiers, s->name);
+
+    if(!symbol) {
+        errorLog->addError("undefined symbol: " + s->name);
+        return ExprAnalysisResult(Type(PrimitiveType::Error));
+    }
+
+    return std::visit(SymbolVisitor{
+        [&](const FunctionSymbol& f) 
+        {
+            if(s->args.size() != f.paramTypes.size()) {
+                errorLog->addError("called function '" + s->name + "()" + "' required a different number of parameters than provided");
+                return ExprAnalysisResult(Type(PrimitiveType::Error));
+            }
+
+            for(int i=0; i < s->args.size(); ++i) {
+                auto res = analyzeExpr(s->args.at(i).get());
+
+                if(!types::isAssignmentCompatible(f.paramTypes.at(i), res.type)) {
+                    errorLog->addError("incopatible parameter type in function call to " + s->name);
+                    return ExprAnalysisResult(Type(PrimitiveType::Error));
+                }
+            }
+
+            return ExprAnalysisResult{f.returnType};
+        },
+        [&](const VariableSymbol& v) {
+            errorLog->addError("'" + s->name + "' is not a function, cannot be called");
+            return ExprAnalysisResult(Type(PrimitiveType::Error));
+        },
+    }, symbol->category);
+}
+
+ExprAnalysisResult SemanticAnalyzer::analyzeUnaryExpr(const UnaryExpr* s)
+{
+    //recursive call
+    ExprAnalysisResult operandResult = analyzeExpr(s->operand.get());
+
+    Type resultType = Type(types::unaryResultType(s->op, operandResult.type.asPrimitive()));
+
+    if (resultType.is(PrimitiveType::Error) && !operandResult.type.is(PrimitiveType::Error)) {
+        errorLog->addError("invalid unary operator for type  " +
+                           types::toString(operandResult.type));
+    }
+
+    return ExprAnalysisResult{resultType};
 }
 
 /*
