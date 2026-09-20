@@ -29,11 +29,31 @@ each written as `field_name:` followed by its value.
  
  ### Bismuth Versions
 
+ ---
+
+ **V 1.10.1** &ensp; <@leonardo-bersellini> &emsp; 20 . 09 . 2026
+
+ `commit:` Extracted Linker from Codegen *-o- ()* 
+ <br>
+ `scope:`  Codegen
+ <br>
+ `features:` extracted the link logic inside a separated header file
+
+ ---
+
+ **V 1.10.0** &ensp; <@leonardo-bersellini> &emsp; 20 . 09 . 2026
+
+ `commit:` Compound Assignment Operators *-o- (ae3d1ef)* 
+ <br>
+ `scope:`  All
+ <br>
+ `features:` added new operators: +=, -=, *=, /=
+
 ---
 
  **V 1.9.4** &ensp; <@leonardo-bersellini> &emsp; 17 . 09 . 2026
 
- `commit:` Implemented Break and Continue Instructions *-o- ()* 
+ `commit:` Implemented Break and Continue Instructions *-o- (d90fad8)* 
  <br>
  `scope:`  Codegen
  <br>
