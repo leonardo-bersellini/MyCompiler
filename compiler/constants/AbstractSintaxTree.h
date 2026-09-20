@@ -53,6 +53,15 @@ public:
     bool isLValue() const override { return false; }
 };
 
+// assegnazioni composte con operatori (es: +=)
+class OpComposedAssignmentExpr : public Expr {
+public:
+    TokenType op; 
+    std::unique_ptr<AssignmentExpr> assignment;
+
+    bool isLValue() const override { return false; }
+};
+
 class VariableExpr : public Expr {
 public:
     std::string name;

@@ -37,7 +37,6 @@ enum class TokenType {
     CaseKeyword,
     DefaultKeyword,
 
-
     BreakKeyword,
     ContinueKeyword,
 
@@ -45,6 +44,11 @@ enum class TokenType {
     Minus,
     Star,
     Slash,
+
+    PlusEqual,
+    MinusEqual,
+    StarEqual,
+    SlashEqual,
 
     Equal,
     EqualEqual,
@@ -96,6 +100,14 @@ inline std::string typeToString(TokenType type) {
     case TokenType::Star:       typeStr = "Star";
         break;
     case TokenType::Slash:      typeStr = "Slash";
+        break;
+    case TokenType::PlusEqual:  typeStr = "PlusEqual";
+        break;
+    case TokenType::MinusEqual: typeStr = "MinusEqual";
+        break;
+    case TokenType::StarEqual:  typeStr = "StarEqual";
+        break;
+    case TokenType::SlashEqual: typeStr = "SlashEqual";
         break;
     case TokenType::Equal:      typeStr = "Equal";
         break;

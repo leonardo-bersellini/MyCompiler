@@ -126,12 +126,6 @@ void CodeGenerator::buildTargetObj(const std::string& target_path, bool debug)
     return;
 }
 
-/*
- * Questa funzione si occupa di utilizzare il linker del progetto per costruire un eseguibile,
- * linkando i file oggetto indicati.
- * Si utilizza il linker lld-link.exe di msys64-ucrt64
- * il flag debug è impostato nella chiamata da parte di compilerdriver. (in base alle opzioni verbose).
- */
 
 bool CodeGenerator::link(const std::string &objFile, const std::string &outputExe, bool debug)
 {
@@ -191,7 +185,6 @@ bool CodeGenerator::link(const std::string &objFile, const std::string &outputEx
 
     return true;
 }
-
 
 /// --- UTILITIES --- ///
 
@@ -1002,6 +995,25 @@ ExprGenResult CodeGenerator::generateExpr(const Expr *expr)
         }
     }
 
+    // Operator-Composed Assignment Expr
+    else if(auto s = dynamic_cast<const OpComposedAssignmentExpr*>(expr))
+    {
+        llvm::Value* symbol = generateLValueAddress(s->assignment->target.get());
+        Type symbolType = getType(getAllocatedType(symbol));
+
+        auto loadSymbol = Builder.CreateLoad(getAllocatedType(symbol), symbol);
+        auto rhsValue = generateExpr(s->assignment->value.get());
+
+        ExprGenResult currentValue{loadSymbol, symbolType};
+        ExprGenResult opResult = generateBinaryOp(s->op, currentValue, rhsValue);
+
+        auto casted = castValue(opResult.llvm_value, opResult.type.asPrimitive(), symbolType.asPrimitive());
+
+        Builder.CreateStore(casted, symbol);
+
+        return ExprGenResult{casted, symbolType};
+    }
+
     // Variable Expression
     else if(auto s = dynamic_cast<const VariableExpr*>(expr))
     {
@@ -1117,9 +1129,13 @@ ExprGenResult CodeGenerator::generateBinaryExpr(const BinaryExpr *s)
     auto left = generateExpr(s->left.get());
     auto right = generateExpr(s->right.get());
 
-    //TODO -> add NOT logico
+    return generateBinaryOp(s->op, left, right);
+}
 
-    PrimitiveType resultType = types::binaryResultType(s->op, left.type.asPrimitive(), right.type.asPrimitive());
+// helper che racchiude la logica di generazione di un operatore binario
+ExprGenResult CodeGenerator::generateBinaryOp(TokenType op, ExprGenResult left, ExprGenResult right)
+{
+    PrimitiveType resultType = types::binaryResultType(op, left.type.asPrimitive(), right.type.asPrimitive());
     PrimitiveType promoteType = types::promotionType(left.type.asPrimitive(), right.type.asPrimitive());
 
     // conversione implicita
@@ -1138,7 +1154,7 @@ ExprGenResult CodeGenerator::generateBinaryExpr(const BinaryExpr *s)
         return {value, resultType};
     };
 
-    switch(s->op) {
+    switch(op) {
 
     case TokenType::Plus :
         return createArithmeticOp(

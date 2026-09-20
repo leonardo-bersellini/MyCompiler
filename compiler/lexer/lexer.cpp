@@ -65,12 +65,24 @@ std::vector<Token> Lexer::analiseString(const std::string &string, ErrorLog &_er
             m_tokens.push_back(ch);
         }
         else if(c == '+') {
-            Token tplus = createToken(TokenType::Plus);
-            m_tokens.push_back(tplus);
+            if(peek(1) == '=') {
+                Token t = createToken(TokenType::PlusEqual);
+                t.lexeme.push_back(advance());
+                m_tokens.push_back(t);
+            } else {
+                Token t = createToken(TokenType::Plus);
+                m_tokens.push_back(t);
+            }
         }
         else if(c == '-') {
-            Token tmin = createToken(TokenType::Minus);
-            m_tokens.push_back(tmin);
+            if(peek(1) == '=') {
+                Token t = createToken(TokenType::MinusEqual);
+                t.lexeme.push_back(advance());
+                m_tokens.push_back(t);
+            } else {
+                Token t = createToken(TokenType::Minus);
+                m_tokens.push_back(t);
+            }
         }
         else if(c == '/')
         {
@@ -93,13 +105,25 @@ std::vector<Token> Lexer::analiseString(const std::string &string, ErrorLog &_er
                     advance(); //consuma '/'
                 }
             } else {
-                Token tdiv = createToken(TokenType::Slash);
-                m_tokens.push_back(tdiv);
+                if(peek(1) == '=') {
+                    Token t = createToken(TokenType::SlashEqual);
+                    t.lexeme.push_back(advance());
+                    m_tokens.push_back(t);
+                } else {
+                    Token t = createToken(TokenType::Slash);
+                    m_tokens.push_back(t);
+                }
             }
         }
         else if(c == '*') {
-            Token tstar = createToken(TokenType::Star);
-            m_tokens.push_back(tstar);
+            if(peek(1) == '=') {
+                Token t = createToken(TokenType::StarEqual);
+                t.lexeme.push_back(advance());
+                m_tokens.push_back(t);
+            } else {
+                Token t = createToken(TokenType::Star);
+                m_tokens.push_back(t);
+            }
         }
         else if(c == '=') {
             if(peek(1) == '=') {

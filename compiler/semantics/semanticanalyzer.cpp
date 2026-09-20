@@ -501,6 +501,12 @@ ExprAnalysisResult SemanticAnalyzer::analyzeExpr(const Expr *expr)
         return analyzeAssignmentExpr(s);
     }
 
+    //OpComposedAssignmentExpr
+    else if(auto s = dynamic_cast<const OpComposedAssignmentExpr*>(expr))
+    {
+        return analyzeOpComposedAssignmentExpr(s);
+    }
+
     // Variable Expression
     else if(auto s = dynamic_cast<const VariableExpr*>(expr))
     {
@@ -569,6 +575,27 @@ ExprAnalysisResult SemanticAnalyzer::analyzeAssignmentExpr(const AssignmentExpr*
     }
 
     return targetResult;
+}
+
+ExprAnalysisResult SemanticAnalyzer::analyzeOpComposedAssignmentExpr(const OpComposedAssignmentExpr* s)
+{
+    ExprAnalysisResult targetResult = analyzeExpr(s->assignment->target.get());
+    ExprAnalysisResult valueResult = analyzeExpr(s->assignment->value.get());
+
+    PrimitiveType resultType = types::binaryResultType(s->op, targetResult.type.asPrimitive(), valueResult.type.asPrimitive());
+
+    if(resultType == PrimitiveType::Error) {
+        errorLog->addError("invalid operator " + typeToString(s->op) + "= for specified operands. " +
+                           "operands types are " + types::toString(targetResult.type) + " and " + types::toString(valueResult.type));
+        return ExprAnalysisResult(Type(PrimitiveType::Error));
+    }   
+
+    ExprAnalysisResult assignResult = analyzeAssignmentExpr(s->assignment.get());
+
+    if(assignResult.type.isError()) 
+        return ExprAnalysisResult(Type(PrimitiveType::Error));
+
+    return assignResult;
 }
 
 ExprAnalysisResult SemanticAnalyzer::analyzeVariableExpr(const VariableExpr* s)

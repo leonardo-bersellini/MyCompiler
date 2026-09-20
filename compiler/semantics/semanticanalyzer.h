@@ -57,6 +57,7 @@ private:
     ExprAnalysisResult analyzeExpr(const Expr* expr);
 
     ExprAnalysisResult analyzeAssignmentExpr(const AssignmentExpr* s);
+    ExprAnalysisResult analyzeOpComposedAssignmentExpr(const OpComposedAssignmentExpr* s);
     ExprAnalysisResult analyzeVariableExpr(const VariableExpr* s);
     ExprAnalysisResult analyzeArrayAccessExpr(const ArrayAccessExpr* s);
     ExprAnalysisResult analyzeLiteralArrayExpr(const LiteralArrayExpr* s);

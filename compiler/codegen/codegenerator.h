@@ -88,6 +88,7 @@ private:
     ExprGenResult generateExpr(const Expr* expr);
 
     ExprGenResult generateBinaryExpr(const BinaryExpr* s);
+    ExprGenResult generateBinaryOp(TokenType op, ExprGenResult left, ExprGenResult right);
     ExprGenResult generateUnaryExpr(const UnaryExpr* expr);
 
 };

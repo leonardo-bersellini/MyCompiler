@@ -807,7 +807,8 @@ std::unique_ptr<Expr> Parser::parseAssignment()
 {
     auto target = parseLogicalOr();
 
-    if(check(TokenType::Equal))
+    // lambda utilizzata per raccogliere la logica di parseAssign base
+    auto parseAssign = [&]() -> std::unique_ptr<Expr> 
     {
         if(!target->isLValue()) {
             errorLog->addError("could not resolve an assignment on an expression which is not an lvalue");
@@ -815,7 +816,7 @@ std::unique_ptr<Expr> Parser::parseAssignment()
             return std::make_unique<ErrorExpr>();
         }
 
-        advance(); //consuma '='
+        advance(); //consuma '=' (o tkn corrente)
         auto value = parseAssignment(); //right-associative
 
         // ricostruzione del nome letterale del target
@@ -829,6 +830,35 @@ std::unique_ptr<Expr> Parser::parseAssignment()
         assign->target = std::move(target);
         assign->value = std::move(value);
         return assign;
+    };
+
+    if(check(TokenType::Equal))
+    {
+        return parseAssign();
+    }
+    // assegnazioni composte con operatori [+=, -=, *=, /=]
+    else if(check(TokenType::PlusEqual) || check(TokenType::MinusEqual)
+            || check(TokenType::StarEqual) || check(TokenType::SlashEqual)) 
+    {
+        auto assign_ = parseAssign();
+
+        if(dynamic_cast<const ErrorExpr*>(assign_.get())) 
+            return assign_;
+
+        // l'assegnazione non ha dato errore, quindi è di tipo AssignExpr
+        AssignmentExpr* assign_ptr = static_cast<AssignmentExpr*>(assign_.release());
+        std::unique_ptr<AssignmentExpr> assign(assign_ptr);
+
+        TokenType op;
+        if(check(TokenType::PlusEqual)) op = TokenType::Plus;
+        else if(check(TokenType::MinusEqual)) op = TokenType::Minus;
+        else if(check(TokenType::StarEqual))  op = TokenType::Star;
+        else if(check(TokenType::SlashEqual)) op = TokenType::Slash;
+
+        auto composed_assign = std::make_unique<OpComposedAssignmentExpr>();
+        composed_assign->assignment = std::move(assign);
+        composed_assign->op = std::move(op);
+        return composed_assign;
     }
 
     return target;

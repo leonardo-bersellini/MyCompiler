@@ -7,7 +7,7 @@
  Every bismuth version follow the same common pattern, `V x.x.x`.
  As for most of versioning models, the first number is the version major, the second one is the version minor and the last one is the debug patch.
   - The version-major number is bumped only for important changes that refactor, delete or add new modules or stepts in the compiling chain (not "only" for changes that makes a part program incompatible).
-  - The version-minor number is bumped for every new feature or implements an older one, adding something to the project capabilities.
+  - The version-minor number is bumped for every new feature adding something to the project capabilities.
   - The debug patch is bumped not only for debug actions and fixes, but also for changes that does not add a new feature to the compiler but still modifies and improves old code. It would be an example a reorganization of the code that just make the project cleaner, but does not fix or add anithing.
 
 
