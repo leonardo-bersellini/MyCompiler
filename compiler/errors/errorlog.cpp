@@ -3,6 +3,9 @@
 #include <iostream>
 #include <algorithm>
 
+#include "utils/ansi/ansi.h"
+namespace clr = ansi::color;
+
 ErrorLog::ErrorLog() {}
 
 /*
@@ -65,13 +68,26 @@ bool ErrorLog::hasWarnings() const
  * Le funzioni di print scrivono in output gli elementi accumulati
  */
 
+void ErrorLog::printEntry(const LogEntry& e) const 
+{
+    std::cout << e.position.source_file << ":(" << e.position.line << ":" << e.position.column << "): ";
+
+    if(e.type == LogType::Error) 
+    {
+        std::cout << clr::red << "error: " << clr::reset << e.message << std::endl;
+    }
+    else if(e.type == LogType::Warning)
+    {
+        std::cout << clr::yellow << "warning: " << clr::reset << e.message << std::endl;
+    }
+}
+
 void ErrorLog::printErrors() const {
     for (const auto& e : entries) 
     {
         if(e.type != LogType::Error) continue;
 
-        std::cout << "Error at line " << e.position.line << " col " << e.position.column 
-                  << ": " << e.message << std::endl;
+        printEntry(e);
     }
 }
 
@@ -80,7 +96,7 @@ void ErrorLog::printWarnings() const {
     {
         if(e.type != LogType::Warning) continue;
 
-        std::cout << "Warning: " << e.message << std::endl;
+        printEntry(e);
     }
 }
 
@@ -88,13 +104,7 @@ void ErrorLog::printAll() const
 {
     for(const auto& e : entries)
     {
-        if(e.type == LogType::Error) {
-                std::cout << "Error at line " << e.position.line << " col " << e.position.column 
-                          << ": " << e.message << std::endl;
-        }
-        else if(e.type == LogType::Warning) {
-            std::cout << "Warning: " << e.message << std::endl;
-        }
+        printEntry(e);
     }
 }
 

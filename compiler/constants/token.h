@@ -2,10 +2,13 @@
 #define TOKEN_H
 
 #include <string>
+#include <unordered_map>
+#include <stdexcept>
 
 struct TextPosition {
     int line;
     int column;
+    std::string source_file;
 };
 
 enum class TokenType {
@@ -84,101 +87,74 @@ struct Token {
     TextPosition position;
 };
 
-inline std::string typeToString(TokenType type) {
-    std::string typeStr;
-    switch(type) {
-    case TokenType::IntegerLiteral: typeStr = "IntegerLiteral";
-        break;
-    case TokenType::DoubleLiteral:  typeStr = "DoubleLiteral";
-        break;
-    case TokenType::Identifier: typeStr = "Identifier";
-        break;
-    case TokenType::Plus:       typeStr = "Plus";
-        break;
-    case TokenType::Minus:      typeStr = "Minus";
-        break;
-    case TokenType::Star:       typeStr = "Star";
-        break;
-    case TokenType::Slash:      typeStr = "Slash";
-        break;
-    case TokenType::PlusEqual:  typeStr = "PlusEqual";
-        break;
-    case TokenType::MinusEqual: typeStr = "MinusEqual";
-        break;
-    case TokenType::StarEqual:  typeStr = "StarEqual";
-        break;
-    case TokenType::SlashEqual: typeStr = "SlashEqual";
-        break;
-    case TokenType::Equal:      typeStr = "Equal";
-        break;
-    case TokenType::LParen:     typeStr = "LParen";
-        break;
-    case TokenType::RParen:     typeStr = "RParen";
-        break;
-    case TokenType::Semicolon:  typeStr = "Semicolon";
-        break;
-    case TokenType::EndOfFile:  typeStr = "EndOfFile";
-        break;
-    case TokenType::Unknown:    typeStr = "Unknown";
-        break;
-    case TokenType::TypeKeyword: typeStr = "TypeKeyword";
-        break;
-    case TokenType::StringLiteral: typeStr = "StringLiteral";
-        break;
-    case TokenType::CharLiteral: typeStr = "CharLiteral";
-        break;
-    case TokenType::BoolLiteral: typeStr = "BoolLiteral";
-        break;
-    case TokenType::LogicalAnd: typeStr = "AND";
-        break;
-    case TokenType::LogicalOr: typeStr = "OR";
-        break;
-    case TokenType::IfKeyword: typeStr = "IfKeyword";
-        break;
-    case TokenType::ElseKeyword: typeStr = "ElseKeyword";
-        break;
-    case TokenType::ElifKeyword: typeStr = "ElifKeyword";
-        break;
-    case TokenType::ForKeyword: typeStr = "ForKeyword";
-        break;
-    case TokenType::BreakKeyword: typeStr = "BreakKeyword";
-        break;
-    case TokenType::ContinueKeyword: typeStr = "ContinueKeyword";
-        break;
-    case TokenType::WhileKeyword: typeStr = "WhileKeyword";
-        break;
-    case TokenType::ReturnKeyword: typeStr = "ReturnKeyword";
-        break;
-    case TokenType::VoidKeyword: typeStr = "VoidKeyword";
-        break;
-    case TokenType::EqualEqual: typeStr = "EqualEqual";
-        break;
-    case TokenType::NotEqual: typeStr = "NotEqual";
-        break;
-    case TokenType::Less: typeStr = "Less";
-        break;
-    case TokenType::LessEqual: typeStr = "LessEqual";
-        break;
-    case TokenType::Greater: typeStr = "Greater";
-        break;
-    case TokenType::GreaterEqual: typeStr = "GreaterEqual";
-        break;
-    case TokenType::LogicalNot: typeStr = "LogicalNot";
-        break;
-    case TokenType::LBracket: typeStr = "LBracket";
-        break;
-    case TokenType::RBracket: typeStr = "RBracket";
-        break;
-    case TokenType::LBrace: typeStr = "LBrace";
-        break;
-    case TokenType::RBrace: typeStr = "RBrace";
-        break;
-    case TokenType::Comma: typeStr = "Comma";
-        break;
+namespace 
+{
+    inline std::unordered_map<TokenType, std::string> type_to_string =
+    {
+        {TokenType::IntegerLiteral, "<integer>"},
+        {TokenType::DoubleLiteral, "<double>"},
+        {TokenType::CharLiteral, "<char>"},
+        {TokenType::BoolLiteral, "<bool>"},
+        {TokenType::ArrayIntegerLiteral, "<int[]>"},
+        {TokenType::ArrayDoubleLiteral, "<double[]>"},
+        {TokenType::ArrayCharLiteral, "<char[]>"},
+        {TokenType::ArrayBoolLiteral, "<bool[]>"},
+        {TokenType::Identifier, "identifier"},
+        {TokenType::TypeKeyword, "type keyword"},
+        {TokenType::IfKeyword, "if"},
+        {TokenType::ElseKeyword, "else"},
+        {TokenType::ElifKeyword, "elif"},
+        {TokenType::ForKeyword, "for"},
+        {TokenType::WhileKeyword, "while"},
+        {TokenType::ReturnKeyword, "return"},
+        {TokenType::VoidKeyword, "void"},
+        {TokenType::ConstKeyword, "const"},
+        {TokenType::NamespaceKeyword, "namespace"},
+        {TokenType::SwitchKeyword, "switch"},
+        {TokenType::CaseKeyword, "case"},
+        {TokenType::DefaultKeyword, "default"},
+        {TokenType::BreakKeyword, "break"},
+        {TokenType::ContinueKeyword, "continue"},
+        {TokenType::Plus, "+"},
+        {TokenType::Minus, "-"},
+        {TokenType::Star, "*"},
+        {TokenType::Slash, "/"},
+        {TokenType::PlusEqual, "+="},
+        {TokenType::MinusEqual, "-="},
+        {TokenType::StarEqual,"*="},
+        {TokenType::SlashEqual,"/="},
+        {TokenType::Equal,"="},
+        {TokenType::EqualEqual,"=="},
+        {TokenType::NotEqual,"!="},
+        {TokenType::Less,"<"},
+        {TokenType::LessEqual,"<="},
+        {TokenType::Greater,">"},
+        {TokenType::GreaterEqual,">="},
+        {TokenType::LogicalAnd,"&&"},
+        {TokenType::LogicalOr,"||"},
+        {TokenType::LogicalNot,"!"},
+        {TokenType::LParen, "("},
+        {TokenType::RParen,")"},
+        {TokenType::LBracket, "["},
+        {TokenType::RBracket,"]"},
+        {TokenType::LBrace, "{"},
+        {TokenType::RBrace,"}"},
+        {TokenType::Semicolon, ";"},
+        {TokenType::Colon,  ":"},
+        {TokenType::ColonColon, "::"},
+        {TokenType::Comma,","},
+        {TokenType::EndOfFile,"EOF"},
+        {TokenType::Unknown,"unknown"},
+    };
+}
 
-    default : typeStr = "ErrorTranslation";
+inline std::string typeToString(TokenType type) {
+    try {
+        return type_to_string.at(type);
+    } 
+    catch (std::out_of_range e) {
+        return "<error-translation>";
     }
-    return typeStr;
 }
 
 

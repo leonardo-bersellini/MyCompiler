@@ -43,6 +43,7 @@ private:
     std::vector<LogEntry> entries;
 
     void addEntry(LogEntry& entry);
+    void printEntry(const LogEntry& entry) const;
 };
 
 #endif // ERRORLOG_H

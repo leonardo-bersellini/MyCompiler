@@ -12,17 +12,25 @@
 
 #include "utils/ansi/ansi.h"
 
-// helper per i qualified names
-using Qualifiers = std::vector<std::string>; //vuoto se l'expr non è un nome qualificato
+// AST Node - classe base da cui ereditano gli oggetti base dell'ast
+
+class ASTNode {
+public:
+    virtual ~ASTNode() = default;
+    TextPosition position;
+};
 
 // Expressions - produce un valore
 
-class Expr {
+class Expr : public ASTNode {
 public:
     virtual ~Expr() = default;
     // lvalue indica un valore al quale si può assegnare un altro valore (rvalue)
     virtual bool isLValue() const =0;
 };
+
+// helper per i qualified names
+using Qualifiers = std::vector<std::string>; //vuoto se l'expr non è un nome qualificato
 
 class NumberExpr : public Expr {
 public:
@@ -121,7 +129,7 @@ public:
 
 // Statements - esecuzione di azioni
 
-class Stmt {
+class Stmt : public ASTNode {
 public:
     virtual ~Stmt() = default;
 };

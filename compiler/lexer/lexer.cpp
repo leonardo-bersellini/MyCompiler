@@ -11,6 +11,15 @@
 Lexer::Lexer() {}
 
 /*
+ * Helper per impostare il valore del file sorgente corrente.
+ */
+
+void Lexer::setSourceFile(const std::string& sourceFile)
+{
+    currentTextPos.source_file = sourceFile;
+}
+
+/*
  * Punto di entrata dell'analisi lessicale.
  * Questa funzione analizza una stringa assegnata dividendola in tokens secondo la grammatica del
  * linguaggio. Per dividere i caratteri in token, analizza i singoli caratteri per richiamare funzioni

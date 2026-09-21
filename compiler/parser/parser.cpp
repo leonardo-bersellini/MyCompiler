@@ -69,6 +69,31 @@ bool Parser::expect(TokenType type, bool applyGhostRecovery) {
 }
 
 /*
+ * Queste due funzioni si occupano di fornire un metodo di creazione automatico di un
+ * nodo AST, inizializzandolo in automatico con dati di base non di competenza del blocco che
+ * richiama la funzione stessa; per esempio la posizione.
+ */
+template<typename T>
+    requires std::derived_from<T, Stmt>
+std::unique_ptr<T> Parser::make_unique_stmt()
+{
+    std::unique_ptr<T> s = std::make_unique<T>();
+    s->position = tokens.at(currentPos).position;
+
+    return s;
+}
+
+template<typename T>
+    requires std::derived_from<T, Expr>
+std::unique_ptr<T> Parser::make_unique_expr()
+{
+    std::unique_ptr<T> e = std::make_unique<T>();
+    e->position = tokens.at(currentPos).position;
+
+    return e;
+}
+
+/*
  * Punto di ingresso per il parsing del programma.
  * si occupa di elaborare e conservare gli statements corrispondenti ai token in un oggetto *<program>
  */
@@ -175,7 +200,7 @@ std::unique_ptr<Stmt> Parser::parseStatement()
 
         advance();                       // consuma 'break'
         expect(TokenType::Semicolon);    // consuma ';'
-        return std::make_unique<BreakStmt>();
+        return make_unique_stmt<BreakStmt>();
     }
     else if(check(TokenType::ContinueKeyword))
     {
@@ -183,7 +208,7 @@ std::unique_ptr<Stmt> Parser::parseStatement()
 
         advance();                       // consuma 'continue'
         expect(TokenType::Semicolon, true);    // consuma ';'
-        return std::make_unique<ContinueStmt>();
+        return make_unique_stmt<ContinueStmt>();
 
     } else {
         // Espressione
@@ -192,12 +217,12 @@ std::unique_ptr<Stmt> Parser::parseStatement()
         expect(TokenType::Semicolon);
 
         //ritorna uno stmt di espressione
-        auto stmt = std::make_unique<ExpressionStmt>();
+        auto stmt = make_unique_stmt<ExpressionStmt>();
         stmt->expr = std::move(expr);
         return stmt;
     }
 
-    return std::make_unique<ErrorStmt>();
+    return make_unique_stmt<ErrorStmt>();
 }
 
 /**
@@ -205,9 +230,6 @@ std::unique_ptr<Stmt> Parser::parseStatement()
  * Queste funzioni sottostanti hanno il compito di racchiudere la logica di gestione e creazione
  * di oggetti stmt, in modo da mantenere la struttura di dispatch generale (parseStmt) più pulita,
  * ed anche in modo da rendere ogni logica di parsing richiamabile da più punti.
- * END
- *
- * Nota: lo scopo pricipale è la pulizia del codice.
  */
 
 /*
@@ -221,7 +243,7 @@ std::unique_ptr<Stmt> Parser::parseScopeStmt()
 {
     expect(TokenType::LBrace, true); // verifica '{'
 
-    auto scope = std::make_unique<BlockStmt>();
+    auto scope = make_unique_stmt<BlockStmt>();
 
     while(!isAtEnd() && peek().type != TokenType::RBrace)
     {
@@ -234,7 +256,7 @@ std::unique_ptr<Stmt> Parser::parseScopeStmt()
         bool closed = expect(TokenType::RBrace);
 
         if(!closed) {
-            auto s = std::make_unique<ErrorStmt>();
+            auto s = make_unique_stmt<ErrorStmt>();
             return s;
         }
     }
@@ -372,7 +394,7 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt(bool isConstDeclaration)
 
         if(!isValid) {
             recoveryHandler.synchronize({TokenType::Semicolon, TokenType::RParen});
-            return std::make_unique<ErrorStmt>();;
+            return make_unique_stmt<ErrorStmt>();;
         }
 
         advance();      //consuma '=' se l'identifier è valido
@@ -380,7 +402,7 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt(bool isConstDeclaration)
         auto initExpr = parseExpr();
         expect(TokenType::Semicolon);
 
-        auto d = std::make_unique<DeclarationStmt>();
+        auto d = make_unique_stmt<DeclarationStmt>();
         d->type = type;
         d->isConst = isConstDeclaration;
         d->name = name;
@@ -395,12 +417,12 @@ std::unique_ptr<Stmt> Parser::parseDeclarationStmt(bool isConstDeclaration)
 
         if(!isValid) {
             recoveryHandler.synchronize({TokenType::Semicolon, TokenType::RParen});
-            return std::make_unique<ErrorStmt>();
+            return make_unique_stmt<ErrorStmt>();
         }
 
         expect(TokenType::Semicolon, true);
 
-        auto d = std::make_unique<DeclarationStmt>();
+        auto d = make_unique_stmt<DeclarationStmt>();
         d->type = type;
         d->isConst = isConstDeclaration;
         d->name = name;
@@ -432,7 +454,7 @@ std::unique_ptr<Stmt> Parser::parseFunctionStmt()
     if(returnType.isError()) errorLog->addError("error: returning <errortype> in function: " + identifier);
     if(!valid) {
         recoveryHandler.synchronize({TokenType::TypeKeyword});
-        return std::make_unique<ErrorStmt>();
+        return make_unique_stmt<ErrorStmt>();
     }
 
     expect(TokenType::LParen, true);
@@ -470,7 +492,7 @@ std::unique_ptr<Stmt> Parser::parseFunctionStmt()
 
     auto body = parseScopeStmt();
 
-    auto function = std::make_unique<FunctionStmt>();
+    auto function = make_unique_stmt<FunctionStmt>();
     function->name = identifier;
     function->returnType = returnType;
     function->params = std::move(params);
@@ -487,7 +509,7 @@ std::unique_ptr<Stmt> Parser::parseReturnStmt()
 {
     advance(); //consuma 'return'
 
-    auto r = std::make_unique<ReturnStmt>();
+    auto r = make_unique_stmt<ReturnStmt>();
 
     if(check(TokenType::Semicolon)) {
         //return senza valore
@@ -532,7 +554,7 @@ std::unique_ptr<Stmt> Parser::parseIfStmt()
     }
 
     // --- nodo if --- //
-    auto ifStmt = std::make_unique<IfStmt>();
+    auto ifStmt = make_unique_stmt<IfStmt>();
     ifStmt->condition = std::move(condition);
     ifStmt->thenBranch = std::move(body);
     ifStmt->elseBranch = std::move(elseBranch);
@@ -553,7 +575,7 @@ std::unique_ptr<Stmt> Parser::parseForStmt()
 {
     advance(); //consuma 'for'
 
-    auto forStmt = std::make_unique<ForStmt>();
+    auto forStmt = make_unique_stmt<ForStmt>();
 
     expect(TokenType::LParen, true);
 
@@ -607,7 +629,7 @@ std::unique_ptr<Stmt> Parser::parseWhileStmt()
 
     auto body = parseBranchBody();
 
-    auto wStmt = std::make_unique<WhileStmt>();
+    auto wStmt = make_unique_stmt<WhileStmt>();
     wStmt->condition = std::move(cond);
     wStmt->body = std::move(body);
 
@@ -627,7 +649,7 @@ std::unique_ptr<Stmt> Parser::parseSwitchStmt()
     expect(TokenType::RParen, true);
 
     //creazione dello switch
-    auto _switch = std::make_unique<SwitchStmt>();
+    auto _switch = make_unique_stmt<SwitchStmt>();
     _switch->scrutinee = std::move(cond);
 
     bool foundDefault = false;
@@ -651,7 +673,7 @@ std::unique_ptr<Stmt> Parser::parseSwitchStmt()
         }
         else {
             errorLog->addError("invalid word in stmt body: " + typeToString(peek().type));
-            return std::make_unique<ErrorStmt>();
+            return make_unique_stmt<ErrorStmt>();
         }
     }
 
@@ -661,7 +683,7 @@ std::unique_ptr<Stmt> Parser::parseSwitchStmt()
         bool closed = expect(TokenType::RBrace, true);
 
         if(!closed) {
-            auto s = std::make_unique<ErrorStmt>();
+            auto s = make_unique_stmt<ErrorStmt>();
             return s;
         }
     }
@@ -680,7 +702,7 @@ std::unique_ptr<CaseStmt> Parser::parseCaseStmt()
 {
     advance(); //consuma case
 
-    auto _case = std::make_unique<CaseStmt>();
+    auto _case = make_unique_stmt<CaseStmt>();
     _case->label = std::move(parseExpr());
             
     expect(TokenType::Colon, true);
@@ -717,7 +739,7 @@ std::unique_ptr<DefaultStmt> Parser::parseDefaultStmt()
 
     expect(TokenType::Colon, true);
 
-    auto _default = std::make_unique<DefaultStmt>();
+    auto _default = make_unique_stmt<DefaultStmt>();
 
     while(!isAtEnd() && peek().type != TokenType::RBrace && peek().type != TokenType::CaseKeyword) {
         auto st = parseStatement();
@@ -746,10 +768,10 @@ std::unique_ptr<Stmt> Parser::parseNamespaceStmt()
 
     if(!check(TokenType::Identifier)) {
         errorLog->addError("expected identifier after namespace declaration keyword", peek().position);
-        return std::make_unique<ErrorStmt>();
+        return make_unique_stmt<ErrorStmt>();
     }
 
-    auto _namespace = std::make_unique<NamespaceStmt>();
+    auto _namespace = make_unique_stmt<NamespaceStmt>();
     _namespace->name = advance().lexeme;
     
     expect(TokenType::LBrace, true);
@@ -813,7 +835,7 @@ std::unique_ptr<Expr> Parser::parseAssignment()
         if(!target->isLValue()) {
             errorLog->addError("could not resolve an assignment on an expression which is not an lvalue");
             recoveryHandler.synchronize({TokenType::Semicolon});
-            return std::make_unique<ErrorExpr>();
+            return make_unique_expr<ErrorExpr>();
         }
 
         advance(); //consuma '=' (o tkn corrente)
@@ -825,7 +847,7 @@ std::unique_ptr<Expr> Parser::parseAssignment()
             name = varExpr->name;
         }
 
-        auto assign = std::make_unique<AssignmentExpr>();
+        auto assign = make_unique_expr<AssignmentExpr>();
         assign->target_name = std::move(name);
         assign->target = std::move(target);
         assign->value = std::move(value);
@@ -840,6 +862,12 @@ std::unique_ptr<Expr> Parser::parseAssignment()
     else if(check(TokenType::PlusEqual) || check(TokenType::MinusEqual)
             || check(TokenType::StarEqual) || check(TokenType::SlashEqual)) 
     {
+        TokenType op;
+        if(check(TokenType::PlusEqual)) op = TokenType::Plus;
+        else if(check(TokenType::MinusEqual)) op = TokenType::Minus;
+        else if(check(TokenType::StarEqual))  op = TokenType::Star;
+        else if(check(TokenType::SlashEqual)) op = TokenType::Slash;
+
         auto assign_ = parseAssign();
 
         if(dynamic_cast<const ErrorExpr*>(assign_.get())) 
@@ -849,13 +877,7 @@ std::unique_ptr<Expr> Parser::parseAssignment()
         AssignmentExpr* assign_ptr = static_cast<AssignmentExpr*>(assign_.release());
         std::unique_ptr<AssignmentExpr> assign(assign_ptr);
 
-        TokenType op;
-        if(check(TokenType::PlusEqual)) op = TokenType::Plus;
-        else if(check(TokenType::MinusEqual)) op = TokenType::Minus;
-        else if(check(TokenType::StarEqual))  op = TokenType::Star;
-        else if(check(TokenType::SlashEqual)) op = TokenType::Slash;
-
-        auto composed_assign = std::make_unique<OpComposedAssignmentExpr>();
+        auto composed_assign = make_unique_expr<OpComposedAssignmentExpr>();
         composed_assign->assignment = std::move(assign);
         composed_assign->op = std::move(op);
         return composed_assign;
@@ -878,7 +900,7 @@ std::unique_ptr<Expr> Parser::parseLogicalOr()
         TokenType op = advance().type;
         auto right = parseLogicalAnd();
 
-        auto binExpr = std::make_unique<BinaryExpr>();
+        auto binExpr = make_unique_expr<BinaryExpr>();
         binExpr->op = op;
         binExpr->left = std::move(left);
         binExpr->right = std::move(right);
@@ -902,7 +924,7 @@ std::unique_ptr<Expr> Parser::parseLogicalAnd()
         TokenType op = advance().type;
         auto right = parseComparison();
 
-        auto binExpr = std::make_unique<BinaryExpr>();
+        auto binExpr = make_unique_expr<BinaryExpr>();
         binExpr->op = op;
         binExpr->left = std::move(left);
         binExpr->right = std::move(right);
@@ -927,7 +949,7 @@ std::unique_ptr<Expr> Parser::parseComparison()
         TokenType op = advance().type;
         auto right = parseMathExpression();
 
-        auto binExpr = std::make_unique<BinaryExpr>();
+        auto binExpr = make_unique_expr<BinaryExpr>();
         binExpr->op = op;
         binExpr->left = std::move(left);
         binExpr->right = std::move(right);
@@ -956,7 +978,7 @@ std::unique_ptr<Expr> Parser::parseMathExpression()
         auto right = parseTerm();
         
         // operazione binaria che unisce il calcolo di un operando destro e sinistro
-        auto binaryExpr = std::make_unique<BinaryExpr>();
+        auto binaryExpr = make_unique_expr<BinaryExpr>();
         binaryExpr->op = op;
         binaryExpr->left = std::move(left);
         binaryExpr->right = std::move(right);
@@ -986,7 +1008,7 @@ std::unique_ptr<Expr> Parser::parseTerm()
         auto right = parseFactor();
         
         //costruzione di un'altra espressione binaria annidata
-        auto binaryExpr = std::make_unique<BinaryExpr>();
+        auto binaryExpr = make_unique_expr<BinaryExpr>();
         binaryExpr->op = op;
         binaryExpr->left = std::move(left);
         binaryExpr->right = std::move(right);
@@ -1015,7 +1037,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
     {
         Token t = advance();
 
-        auto numberExpr = std::make_unique<NumberExpr>();
+        auto numberExpr = make_unique_expr<NumberExpr>();
         numberExpr->value = t.numericValue;
         numberExpr->isInteger = (t.type == TokenType::IntegerLiteral);
         return numberExpr;
@@ -1028,14 +1050,14 @@ std::unique_ptr<Expr> Parser::parseFactor()
 
         if(lexeme.empty()) {
             errorLog->addError("could not convert \"\" (empty char list) to an array of type char[]", peek().position);
-            return std::make_unique<ErrorExpr>();
+            return make_unique_expr<ErrorExpr>();
         }
 
-        auto arrStr = std::make_unique<LiteralArrayExpr>();
+        auto arrStr = make_unique_expr<LiteralArrayExpr>();
         arrStr->type = ArrayType(PrimitiveType::Char, lexeme.size());
         
         for(const char c : lexeme) {
-            auto charExpr = std::make_unique<CharExpr>();
+            auto charExpr = make_unique_expr<CharExpr>();
             charExpr->value = c;
             arrStr->elements.push_back(std::move(charExpr));
         }
@@ -1048,7 +1070,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
     {
         std::string ch_str = advance().lexeme; //stringa con un carattere
 
-        auto charExpr = std::make_unique<CharExpr>();
+        auto charExpr = make_unique_expr<CharExpr>();
         charExpr->value = ch_str.at(0); //estrazione char
         return charExpr;
     }
@@ -1067,7 +1089,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
             val = lexeme == "1" ? true : false;
         }
 
-        auto boolExpr = std::make_unique<BooleanExpr>();
+        auto boolExpr = make_unique_expr<BooleanExpr>();
         boolExpr->value = val;
         return boolExpr;
     }
@@ -1077,7 +1099,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
     {
         advance(); //consuma [
 
-        auto arr = std::make_unique<LiteralArrayExpr>();
+        auto arr = make_unique_expr<LiteralArrayExpr>();
 
         while(!check(TokenType::RBracket) && !isAtEnd()) 
         {
@@ -1092,7 +1114,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
     // Chiamata a funzione
     else if(check(TokenType::Identifier) && peek(1).type == TokenType::LParen)
     {
-        auto call = std::make_unique<CallExpr>();
+        auto call = make_unique_expr<CallExpr>();
 
         auto nameInfo = resolveQualifiedName();
 
@@ -1118,14 +1140,14 @@ std::unique_ptr<Expr> Parser::parseFactor()
     // Accesso a indice di un array
     else if(check(TokenType::Identifier) && peek(1).type == TokenType::LBracket)
     {
-        auto base = std::make_unique<VariableExpr>();
+        auto base = make_unique_expr<VariableExpr>();
         base->name = advance().lexeme; //identifier
         
         expect(TokenType::LBracket, true);
         auto index = parseExpr();
         expect(TokenType::RBracket, true);
 
-        auto arrAccess = std::make_unique<ArrayAccessExpr>();
+        auto arrAccess = make_unique_expr<ArrayAccessExpr>();
         arrAccess->base = std::move(base);
         arrAccess->index = std::move(index);
         return arrAccess;
@@ -1136,7 +1158,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
     {
         auto nameInfo = resolveQualifiedName();
 
-        auto variableExpr = std::make_unique<VariableExpr>();
+        auto variableExpr = make_unique_expr<VariableExpr>();
         variableExpr->name = nameInfo.first;
         variableExpr->qualifiers = nameInfo.second;
         return variableExpr;
@@ -1157,7 +1179,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
     {
         TokenType op = advance().type; //consuma il token '-' o '+'
 
-        auto unaryExpr = std::make_unique<UnaryExpr>();
+        auto unaryExpr = make_unique_expr<UnaryExpr>();
         unaryExpr->op = op;
         unaryExpr->operand = parseFactor(); //call ricorsiva
         return unaryExpr;
@@ -1168,7 +1190,7 @@ std::unique_ptr<Expr> Parser::parseFactor()
         errorLog->addError("Parse error. Expected a factor, received a different token. token: " +
                                typeToString(tokens.at(currentPos).type), peek().position);
         recoveryHandler.skipToken();
-        auto error = std::make_unique<ErrorExpr>();
+        auto error = make_unique_expr<ErrorExpr>();
         return error;
     }
 

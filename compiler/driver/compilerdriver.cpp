@@ -307,6 +307,7 @@ bool CompilerDriver::compilePipeline(const std::string &source, const CompilerOp
     }
 
     // Lettura e parsing del codice, indipendente dai flags
+    lexer.setSourceFile(options.inputFile);
     const std::vector<Token> tokens = lexer.analiseString(source, errorLog);
 
     if(errorLog.hasErrors())

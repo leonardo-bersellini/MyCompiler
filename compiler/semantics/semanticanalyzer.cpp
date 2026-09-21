@@ -37,13 +37,13 @@ void SemanticAnalyzer::analyzeProgram(const Program &program, ErrorLog &errorLog
         }
 
         if(!isValidAtTopLevel(*st.get())) {
-            this->errorLog->addError("invalid statement at top-level context. [invalidGlobalStmt]");
+            this->errorLog->addError("invalid statement at top-level context. [invalidGlobalStmt]", st->position);
             valid = false;
         }
     }
 
     if(!winmain_found) {
-        this->errorLog->addError("could not find winmain entrance for program");
+        this->errorLog->addError("could not find winmain entrance for program", program.statements.at(0)->position);
         return;
     }
 
@@ -128,29 +128,29 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
     else if(auto s = dynamic_cast<const CaseStmt*>(stmt))
     {
         // l'analisi di un case può trovarsi solo dentro uno switch stmt
-        errorLog->addError("invalid case outside of switch");
+        errorLog->addError("invalid case outside of switch", s->position);
     }
 
     // Default
     else if(auto s = dynamic_cast<const DefaultStmt*>(stmt))
     {
         // l'analisi di un default può trovarsi solo dentro uno switch stmt
-        errorLog->addError("invalid default outside of switch");
+        errorLog->addError("invalid default outside of switch", s->position);
     }
 
     // Break Stmt
-    else if(dynamic_cast<const BreakStmt*>(stmt))
+    else if(auto s = dynamic_cast<const BreakStmt*>(stmt))
     {
         if(loopDepth == 0) {
-            errorLog->addError("invalid break stmt inside current scope [-InvalidBreakContext]");
+            errorLog->addError("invalid break stmt inside current scope [-InvalidBreakContext]", s->position);
         }
     }
 
     // continue Stmt
-    else if(dynamic_cast<const ContinueStmt*>(stmt))
+    else if(auto s = dynamic_cast<const ContinueStmt*>(stmt))
     {
         if(loopDepth == 0) {
-            errorLog->addError("invalid continue stmt inside current scope [-InvalidContinueContext]");
+            errorLog->addError("invalid continue stmt inside current scope [-InvalidContinueContext]", s->position);
         }
     }
 
@@ -181,12 +181,12 @@ void SemanticAnalyzer::analyzeBlockStmt(const BlockStmt* block)
 void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
 {
     if(s->type.is(PrimitiveType::Void)) { 
-        errorLog->addError("variable " + s->name + " declared void");
+        errorLog->addError("variable " + s->name + " declared void", s->position);
         return;
     }
 
     if(s->isConst && !s->initializer) {
-        errorLog->addError("could not declare a const variable without initialization");
+        errorLog->addError("could not declare a const variable without initialization", s->position);
         return;
     }
 
@@ -198,7 +198,7 @@ void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
         if (!types::isAssignmentCompatible(s->type, initResult.type)) {
             errorLog->addError("tipo incompatibile nell'inizializzazione di " + s->name + "  " +
                                 "[confronto tra " + types::toString(s->type) + " e " 
-                                + types::toString(initResult.type) + "]");
+                                + types::toString(initResult.type) + "]", s->position);
         }
     }
 
@@ -211,13 +211,13 @@ void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
                         || dynamic_cast<const BooleanExpr*>(init);
 
         if(!isLiteral) {
-            errorLog->addError("global variable '" + s->name + "' must be initialized with a constant literal");
+            errorLog->addError("global variable '" + s->name + "' must be initialized with a constant literal", s->position);
             return;
         }
     }
 
     if(scopeStack.symbolExistsInCurrentScope(s->name)) {
-        errorLog->addError("redeclaration of variable: " + s->name);
+        errorLog->addError("redeclaration of variable: " + s->name, s->position);
     } else {
         scopeStack.declareSymbol(s->name, Symbol(VariableSymbol(s->type, s->isConst)));
     }
@@ -226,13 +226,13 @@ void SemanticAnalyzer::analyzeDeclaration(const DeclarationStmt* s)
 void SemanticAnalyzer::analyseFunction(const FunctionStmt* s)
 {
     if(currentFunction != nullptr) {
-        errorLog->addError("could not declare a function inside another function scope");
+        errorLog->addError("could not declare a function inside another function scope", s->position);
         return;
     }
 
     if(scopeStack.symbolExistsAnywhere(s->name)) {
         // funzione già dichiarata
-        errorLog->addError("redeclaration of function:" + s->name);
+        errorLog->addError("redeclaration of function:" + s->name, s->position);
         return;
     }
 
@@ -259,7 +259,7 @@ void SemanticAnalyzer::analyseFunction(const FunctionStmt* s)
 
     // ogni funzione non-void deve avere un return valido per ogni path
     if(!s->returnType.is(PrimitiveType::Void) && !allPathsReturn(s->body.get())) {
-        errorLog->addError("not all code paths return a value in function " + s->name);
+        errorLog->addError("not all code paths return a value in function " + s->name, s->position);
     }
 
     analyzeStmt(s->body.get());
@@ -272,17 +272,17 @@ void SemanticAnalyzer::analyseFunction(const FunctionStmt* s)
 void SemanticAnalyzer::analyzeReturn(const ReturnStmt* s)
 {
     if(currentFunction == nullptr) {
-        errorLog->addError("return stmt fuori da una funzione");
+        errorLog->addError("return stmt fuori da una funzione", s->position);
         return;
     } 
 
     if(currentFunction->returnType.is(PrimitiveType::Void) && s->value != nullptr) {
-        errorLog->addError("returning a value in a function declared void");
+        errorLog->addError("returning a value in a function declared void", s->position);
         return;
     }
 
     if(!currentFunction->returnType.is(PrimitiveType::Void) && s->value == nullptr) {
-        errorLog->addError("return stmt with no value in a function returning non-void");
+        errorLog->addError("return stmt with no value in a function returning non-void", s->position);
         return;
     }
 
@@ -292,7 +292,7 @@ void SemanticAnalyzer::analyzeReturn(const ReturnStmt* s)
 
         if(!types::isAssignmentCompatible(currentFunction->returnType, res.type)) {
             errorLog->addError("could not convert " + types::toString(res.type) +
-                               " to " + types::toString(currentFunction->returnType) + " in return");
+                               " to " + types::toString(currentFunction->returnType) + " in return", s->position);
             return;
         }
     }
@@ -303,7 +303,7 @@ void SemanticAnalyzer::analyzeIf(const IfStmt* s)
     ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
 
     if(!condResult.type.is(PrimitiveType::Bool) && !condResult.type.is(PrimitiveType::Error)) {
-        errorLog->addError("if condition must be of type boolean");
+        errorLog->addError("if condition must be of type boolean", s->position);
     }
 
     analyzeStmt(s->thenBranch.get()); //il body è uno stmt
@@ -321,7 +321,7 @@ void SemanticAnalyzer::analyzeFor(const ForStmt* s)
     if(s->condition) {
         ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
         if(!condResult.type.is(PrimitiveType::Bool) && !condResult.type.is(PrimitiveType::Error)) {
-            errorLog->addError("la condizione del for deve essere di tipo bool");
+            errorLog->addError("la condizione del for deve essere di tipo bool", s->position);
         }
     }
     if(s->update) analyzeExpr(s->update.get());
@@ -337,7 +337,7 @@ void SemanticAnalyzer::analyzeWhile(const WhileStmt* s)
 {
     ExprAnalysisResult condResult = analyzeExpr(s->condition.get());
     if(!condResult.type.is(PrimitiveType::Bool) && !condResult.type.is(PrimitiveType::Error)) {
-        errorLog->addError("la condizione del while deve essere di tipo bool");
+        errorLog->addError("la condizione del while deve essere di tipo bool", s->position);
     }
 
     loopDepth++;
@@ -358,7 +358,7 @@ void SemanticAnalyzer::analyzeSwitch(const SwitchStmt* s)
     
     default:
         errorLog->addError("invalid type in switch condition (" 
-            + types::toString(scrutineeResult.type) + ")");
+            + types::toString(scrutineeResult.type) + ")", s->position);
         break;
     }
 
@@ -377,7 +377,7 @@ void SemanticAnalyzer::analyzeCase(const CaseStmt* s, const PrimitiveType& switc
 
     if(condResult.type.asPrimitive() != switch_type) {
         //non considera nessuna promozione automatica
-        errorLog->addError("case label value is incompatible with switch value");
+        errorLog->addError("case label value is incompatible with switch value", s->position);
         return;
     }
 
@@ -385,7 +385,7 @@ void SemanticAnalyzer::analyzeCase(const CaseStmt* s, const PrimitiveType& switc
     if(dynamic_cast<const CharExpr*>(s->label.get()) || dynamic_cast<const NumberExpr*>(s->label.get())) {
         // il valore è di natura costante
     } else {
-        errorLog->addError("case label value must be constant and known at compile-time");
+        errorLog->addError("case label value must be constant and known at compile-time", s->position);
     }
 
     for(const auto& st : s->body) {
@@ -426,7 +426,7 @@ void SemanticAnalyzer::analyzeNamespace(const NamespaceStmt* s)
         if(auto d = dynamic_cast<const DeclarationStmt*>(st.get()))
         {
             if(namespaceTable->symbolExistInCurrentNamespace(d->name)) {
-                errorLog->addError("redeclaration of symbol: " + s->name + "::" + d->name);
+                errorLog->addError("redeclaration of symbol: " + s->name + "::" + d->name, s->position);
                 continue;
             } else {
                 namespaceTable->declareSymbol(d->name, Symbol(VariableSymbol(d->type, d->isConst)));
@@ -437,7 +437,7 @@ void SemanticAnalyzer::analyzeNamespace(const NamespaceStmt* s)
         else if(auto d = dynamic_cast<const FunctionStmt*>(st.get()))
         {
             if(namespaceTable->symbolExistInCurrentNamespace(d->name)) {
-                errorLog->addError("redeclaration of function: " + d->name);
+                errorLog->addError("redeclaration of function: " + d->name, s->position);
                 continue;
             } else {
                 std::vector<Type> paramTypes;
@@ -450,7 +450,7 @@ void SemanticAnalyzer::analyzeNamespace(const NamespaceStmt* s)
             analyzeStmt(d);
         }
         else {
-            errorLog->addError("invalid statement in namespace definition");
+            errorLog->addError("invalid statement in namespace definition", s->position);
         }
     }
 
@@ -562,14 +562,14 @@ ExprAnalysisResult SemanticAnalyzer::analyzeAssignmentExpr(const AssignmentExpr*
     if(!types::isAssignmentCompatible(targetResult.type, valueResult.type)) {
         errorLog->addError("tipo incompatibile nell'assegnazione a " + s->target_name + "  " +
                         "[confronto tra " + types::toString(targetResult.type) + " e " 
-                        + types::toString(valueResult.type) + "]");
+                        + types::toString(valueResult.type) + "]", s->position);
         return ExprAnalysisResult(Type(PrimitiveType::Error));
     }
 
     if(auto varExpr = dynamic_cast<const VariableExpr*>(s->target.get()))
     {
         if(targetResult.isConst) {
-            errorLog->addError("forbidden assignment of const variable '" + varExpr->name + "'");
+            errorLog->addError("forbidden assignment of const variable '" + varExpr->name + "'", s->position);
             return ExprAnalysisResult(Type(PrimitiveType::Error));
         }
     }
@@ -586,7 +586,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeOpComposedAssignmentExpr(const OpCom
 
     if(resultType == PrimitiveType::Error) {
         errorLog->addError("invalid operator " + typeToString(s->op) + "= for specified operands. " +
-                           "operands types are " + types::toString(targetResult.type) + " and " + types::toString(valueResult.type));
+                           "operands types are " + types::toString(targetResult.type) + " and " + types::toString(valueResult.type), s->position);
         return ExprAnalysisResult(Type(PrimitiveType::Error));
     }   
 
@@ -603,7 +603,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeVariableExpr(const VariableExpr* s)
     auto symbol = lookupSymbol(s->qualifiers, s->name);
 
     if(!symbol) {
-        errorLog->addError("undefined symbol: " + s->name);
+        errorLog->addError("undefined symbol: " + s->name, s->position);
         return ExprAnalysisResult(Type(PrimitiveType::Error));
     }
 
@@ -613,7 +613,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeVariableExpr(const VariableExpr* s)
             return ExprAnalysisResult(v.type, v.isConst);
         },
         [&] (const FunctionSymbol& f) {
-            errorLog->addError("'" + s->name + "' is a function, cannot be used as a variable");
+            errorLog->addError("'" + s->name + "' is a function, cannot be used as a variable", s->position);
             return ExprAnalysisResult(Type(PrimitiveType::Error));
         }
     }, symbol->category);
@@ -629,12 +629,12 @@ ExprAnalysisResult SemanticAnalyzer::analyzeArrayAccessExpr(const ArrayAccessExp
     }
 
     if(!baseResult.type.isArray()) {
-        errorLog->addError("indexing a non-array type (" + types::toString(baseResult.type) + ")");
+        errorLog->addError("indexing a non-array type (" + types::toString(baseResult.type) + ")", s->position);
         return ExprAnalysisResult{Type(PrimitiveType::Error)};
     }
 
     if(!indexResult.type.is(PrimitiveType::Int)) {
-        errorLog->addError("array index must be of type integer");
+        errorLog->addError("array index must be of type integer", s->position);
     }
 
     PrimitiveType elementType = std::get<ArrayType>(baseResult.type.category).elementType;
@@ -645,7 +645,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeArrayAccessExpr(const ArrayAccessExp
 ExprAnalysisResult SemanticAnalyzer::analyzeLiteralArrayExpr(const LiteralArrayExpr* s)
 {
     if(s->elements.empty()) {
-        errorLog->addError("could not convert empty enclosed-bracket to an array");
+        errorLog->addError("could not convert empty enclosed-bracket to an array", s->position);
         return ExprAnalysisResult{Type(PrimitiveType::Error)};
     }
 
@@ -658,7 +658,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeLiteralArrayExpr(const LiteralArrayE
         if(type.asPrimitive() != arrayType.asPrimitive()) {
             errorLog->addError("incompatible element of type " + types::toString(type) +
                                 " in literal array of type " + types::toString(arrayType) + 
-                                " at index " + std::to_string(i));
+                                " at index " + std::to_string(i), s->position);
             return ExprAnalysisResult{Type(PrimitiveType::Error)};
         }
     }
@@ -677,7 +677,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeCallExpr(const CallExpr* s)
     auto symbol = lookupSymbol(s->qualifiers, s->name);
 
     if(!symbol) {
-        errorLog->addError("undefined symbol: " + s->name);
+        errorLog->addError("undefined symbol: " + s->name, s->position);
         return ExprAnalysisResult(Type(PrimitiveType::Error));
     }
 
@@ -685,7 +685,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeCallExpr(const CallExpr* s)
         [&](const FunctionSymbol& f) 
         {
             if(s->args.size() != f.paramTypes.size()) {
-                errorLog->addError("called function '" + s->name + "()" + "' required a different number of parameters than provided");
+                errorLog->addError("called function '" + s->name + "()" + "' required a different number of parameters than provided", s->position);
                 return ExprAnalysisResult(Type(PrimitiveType::Error));
             }
 
@@ -693,7 +693,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeCallExpr(const CallExpr* s)
                 auto res = analyzeExpr(s->args.at(i).get());
 
                 if(!types::isAssignmentCompatible(f.paramTypes.at(i), res.type)) {
-                    errorLog->addError("incopatible parameter type in function call to " + s->name);
+                    errorLog->addError("incopatible parameter type in function call to " + s->name, s->position);
                     return ExprAnalysisResult(Type(PrimitiveType::Error));
                 }
             }
@@ -701,7 +701,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeCallExpr(const CallExpr* s)
             return ExprAnalysisResult{f.returnType};
         },
         [&](const VariableSymbol& v) {
-            errorLog->addError("'" + s->name + "' is not a function, cannot be called");
+            errorLog->addError("'" + s->name + "' is not a function, cannot be called", s->position);
             return ExprAnalysisResult(Type(PrimitiveType::Error));
         },
     }, symbol->category);
@@ -716,7 +716,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeUnaryExpr(const UnaryExpr* s)
 
     if (resultType.is(PrimitiveType::Error) && !operandResult.type.is(PrimitiveType::Error)) {
         errorLog->addError("invalid unary operator for type  " +
-                           types::toString(operandResult.type));
+                           types::toString(operandResult.type), s->position);
     }
 
     return ExprAnalysisResult{resultType};
@@ -738,7 +738,7 @@ ExprAnalysisResult SemanticAnalyzer::analyzeBinaryOperation(const BinaryExpr *ex
 
     if(resultType == PrimitiveType::Error) {
         errorLog->addError("operazione non valida tra tipi " +
-                types::toString(leftType) + " e " + types::toString(rightType));
+                types::toString(leftType) + " e " + types::toString(rightType), expr->position);
 
         return ExprAnalysisResult(Type(PrimitiveType::Error));
     }

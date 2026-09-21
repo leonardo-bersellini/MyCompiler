@@ -12,6 +12,8 @@ class Lexer
 public:
     Lexer();
 
+    void setSourceFile(const std::string& sourceFile);
+    
     std::vector<Token> analiseString(const std::string& string, ErrorLog& _errorLog);
 
     void printTokens();

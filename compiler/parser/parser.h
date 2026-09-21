@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <memory>
+#include <concepts>
 
 #include "token.h"
 #include "AbstractSintaxTree.h"
@@ -32,6 +33,14 @@ private:
     bool isAtEnd(int pos) const;
     bool check(TokenType type) const;
     bool expect(TokenType type, bool applyGhostRecovery = false);
+
+    template<typename T>
+        requires std::derived_from<T, Stmt>
+    std::unique_ptr<T> make_unique_stmt();
+
+    template<typename T>
+        requires std::derived_from<T, Expr>
+    std::unique_ptr<T> make_unique_expr();
 
     std::unique_ptr<Stmt> parseStatement();
 
