@@ -479,13 +479,6 @@ void SemanticAnalyzer::analyzePrint(const PrintStmt* s)
         return;
     }
 
-    if(result.type.asPrimitive() != PrimitiveType::Error && 
-    (result.type.asPrimitive() != PrimitiveType::Bool || result.type.asPrimitive() != PrimitiveType::Char)) 
-    {
-        errorLog->addError("invalid call to print() function. parameter type: " + types::toString(result.type), s->position);
-        return;
-    }
-
     if(result.type.isArray() && std::get<ArrayType>(result.type.category).elementType != PrimitiveType::Char) {
         errorLog->addError("invalid call to print() function using an array value as parameter.", s->position);
         return;

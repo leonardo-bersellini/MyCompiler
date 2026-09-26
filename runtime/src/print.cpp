@@ -42,6 +42,24 @@ bool bsm_print(const char* data, size_t len)
 #include "conversions.cpp"
 
 extern "C"
+void bsm_print_int(int32_t integer)
+{
+    char buffer[64];
+    size_t size = bsm_int32_to_str(integer, buffer, sizeof(buffer));
+
+    bsm_print(buffer, size);
+}
+
+extern "C"
+void bsm_print_double(double value)
+{
+    char buffer[64];
+    size_t size = bsm_double_to_str(value, buffer, sizeof(buffer));
+
+    bsm_print(buffer, size);
+}
+
+extern "C"
 void bsm_print_char(char value)
 {
     bsm_print(&value, 1);

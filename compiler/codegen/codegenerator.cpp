@@ -863,6 +863,8 @@ void CodeGenerator::generatePrintStmt(const PrintStmt* st)
     {
         [&](const PrimitiveType& p) -> bool {
             switch(p) {
+                case PrimitiveType::Int:    printWithConversion("bsm_print_int");    return true;
+                case PrimitiveType::Double: printWithConversion("bsm_print_double"); return true;
                 case PrimitiveType::Bool:   printWithConversion("bsm_print_bool");   return true;
                 case PrimitiveType::Char:   printWithConversion("bsm_print_char");   return true;
             }
