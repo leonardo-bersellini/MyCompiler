@@ -50,6 +50,7 @@ The project is continuously evolving, becoming progressively more complete and r
 - `const`, const declarations and parameters
 - Function declaration, `return`
 - `arrays`, complex types and static arrays
+- `print`: built-in function
 
 **Supported expressions**
 - Arithmetic, comparison, and logical operators
@@ -57,6 +58,7 @@ The project is continuously evolving, becoming progressively more complete and r
 - Variables and function calls
 - Parenthesized expressions
 - Access to an array element
+- Compound Assignment operators (+=)
 
 ---
 
@@ -156,10 +158,14 @@ compiler/
 ├── codegen/
 ├── constants/
 ├── driver/
-├── errorlog/
+├── errors/
 ├── lexer/
 ├── parser/
-└── semantics/
+├── semantics/
+└── utils/
+
+runtime/
+└── src/ 
 
 tests/
 └── test_***.cpp
@@ -175,6 +181,7 @@ bin/
 ├── bismuth.exe             # the compiler executable 
 | 
 ├── lld-link.exe
+├── runtime/                # bsm runtime lib
 └── libs/                   # lld dependencies
     └── lib files (.a, .dll, .o)  
 ```
