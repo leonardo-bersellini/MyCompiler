@@ -81,6 +81,7 @@ private:
     void generateWhileStmt(const WhileStmt* st);
     void generateSwitchStmt(const SwitchStmt* st);
     void generateNamespaceStmt(const NamespaceStmt* st);
+    void generatePrintStmt(const PrintStmt* st);
 
     std::vector<llvm::ConstantInt*> collectCaseLabels(const CaseStmt* c, const CaseStmt*& leaf);
     llvm::ConstantInt* generateConstantLabel(const Expr* label);

@@ -210,7 +210,12 @@ std::unique_ptr<Stmt> Parser::parseStatement()
         expect(TokenType::Semicolon, true);    // consuma ';'
         return make_unique_stmt<ContinueStmt>();
 
-    } else {
+    } 
+    else if(check(TokenType::PrintKeyword)) 
+    {
+        return parsePrintStmt();
+    } 
+    else {
         // Espressione
 
         auto expr = parseExpr();
@@ -785,6 +790,27 @@ std::unique_ptr<Stmt> Parser::parseNamespaceStmt()
     expect(TokenType::RBrace, true);
 
     return _namespace;
+}
+
+/*
+ * Questa funzione si occupa del parsing degli stmt di call della funzione
+ * built-in di print.
+ */
+
+std::unique_ptr<Stmt> Parser::parsePrintStmt()
+{
+    advance(); //consuma print
+
+    expect(TokenType::LParen, true);
+    auto expr = parseExpr();
+    expect(TokenType::RParen, true);
+
+    expect(TokenType::Semicolon, true);
+
+    auto print = make_unique_stmt<PrintStmt>();
+    print->content = std::move(expr);
+
+    return print;
 }
 
 /**

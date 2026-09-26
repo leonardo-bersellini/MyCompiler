@@ -209,6 +209,11 @@ public:
     std::vector<std::unique_ptr<Stmt>> body;
 };
 
+class PrintStmt : public Stmt {
+public:
+    std::unique_ptr<Expr> content;
+};
+
 class ErrorStmt : public Stmt {
 public:
     //void, placeholder per error stmt

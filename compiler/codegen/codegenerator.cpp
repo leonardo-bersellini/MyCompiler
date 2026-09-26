@@ -2,6 +2,7 @@
 
 #include <llvm/IR/Verifier.h>
 #include <iostream>
+#include <variant>
 
 #include "linker/linker.h"
 
@@ -56,7 +57,7 @@ void CodeGenerator::buildTargetObj(const std::string& target_path, bool debug)
     llvm::InitializeNativeTargetAsmPrinter();
     llvm::InitializeNativeTargetAsmParser();
 
-    //CREA TAGETMACHINE
+    //CREA TARGETMACHINE
     auto TargetTriple = llvm::sys::getDefaultTargetTriple();
 
     if (llvm::verifyModule(*Module, &llvm::errs())) {
@@ -451,6 +452,12 @@ void CodeGenerator::generateStmt(const Stmt *stmt)
         Builder.SetInsertPoint(deadBB);
     }
 
+    // Print Stmt
+    else if(auto s = dynamic_cast<const PrintStmt*>(stmt))
+    {
+        generatePrintStmt(s);
+    }
+
     return;
 }
 
@@ -811,6 +818,69 @@ void CodeGenerator::generateNamespaceStmt(const NamespaceStmt* st)
     }
 
     namespaceTable->pop();
+}
+
+/*
+ * Funzione di generazione degli stmt di print (call di funzione buit-in).
+ * La funzione di print deve convertire in modo automatico ogni tipo di variabile in
+ * un array di caratteri.
+ * 
+ * La funzione di print si adatta anche a tipi non string, richiamando altre funzione runtime
+ * di print specifiche, dedotte in base al tipo.
+ */
+
+void CodeGenerator::generatePrintStmt(const PrintStmt* st)
+{
+    ExprGenResult expr = generateExpr(st->content.get());
+
+    llvm::Type* voidTy = getLLVMType(Type(PrimitiveType::Void));
+    llvm::Type* exprTy = getLLVMType(expr.type);
+
+    auto printWithConversion = [&](const std::string funcName)
+    {
+        llvm::FunctionType* funcTy = llvm::FunctionType::get(voidTy, { exprTy }, false);
+        llvm::FunctionCallee callee = Module->getOrInsertFunction(funcName, funcTy);
+
+        Builder.CreateCall(callee, { expr.llvm_value });
+    };
+
+    auto printString = [&](llvm::Value* str, const size_t len) 
+    {
+        llvm::Type* charPtrTy = llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(Context));
+        llvm::Type* sizeTy = llvm::Type::getInt64Ty(Context); //la funzione runtime legge size_t (uint64)
+        llvm::Value* lenValue = llvm::ConstantInt::get(sizeTy, len);
+
+        //funzione: void bsm_print(char[], size)
+        llvm::FunctionType* funcTy = llvm::FunctionType::get(voidTy, {charPtrTy, sizeTy}, false);
+        llvm::FunctionCallee callee = Module->getOrInsertFunction("bsm_print", funcTy);
+
+        Builder.CreateCall(callee, {str, lenValue});
+    };
+
+    //dispath che richiama o costruisce la corretta funzione runtime di print
+    //ritorna un booleano di controllo che specifica se il tipo è stato gestito
+    bool handled = std::visit(TypeVisitor
+    {
+        [&](const PrimitiveType& p) -> bool {
+            switch(p) {
+                case PrimitiveType::Bool:   printWithConversion("bsm_print_bool");   return true;
+                case PrimitiveType::Char:   printWithConversion("bsm_print_char");   return true;
+            }
+            return false;
+        },
+        [&](const ArrayType& a) -> bool {
+            switch(a.elementType) {
+                case PrimitiveType::Char:   printString(expr.llvm_value, a.size);    return true;
+            }
+            return false;
+        },
+    }, expr.type.category);
+
+    if(!handled) {
+        throw std::runtime_error("codegen internal error: unsupported type for print. type: " + types::toString(expr.type));
+    }
+
+    return;
 }
 
 /*

@@ -19,6 +19,7 @@ bool linker::lld_link(const std::string &objFile, const std::string &outputExe, 
 
     std::string linkerPath = appDir.string() + "/lld-link.exe";
     std::string libDir     = appDir.string() + "/libs";
+    std::string runtimeDir = appDir.string() + "/runtime";
 
     //argomenti per lld-link
     std::vector<std::string> args = 
@@ -27,6 +28,7 @@ bool linker::lld_link(const std::string &objFile, const std::string &outputExe, 
         "-out:" + outputExe,
         "-subsystem:console",
         "-libpath:" + libDir,
+        "-libpath:" + runtimeDir,
         "crt2.o",
         "libmingw32.a",
         "libgcc.a",
@@ -39,6 +41,13 @@ bool linker::lld_link(const std::string &objFile, const std::string &outputExe, 
         "libuser32.a",
         "libkernel32.a"
     };
+
+    //aggiunta automatica delle librerie runtime
+    for (const auto& entry : std::filesystem::directory_iterator(runtimeDir)) {
+        if (entry.is_regular_file()) {
+            args.push_back(entry.path().filename().string());
+        }
+    }
 
     if(debug) {
         std::cout << "linker path: " << clr::bright_black << linkerPath << clr::reset << std::endl;

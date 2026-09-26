@@ -50,6 +50,7 @@ private:
     void analyzeWhile(const WhileStmt* s);
     void analyzeSwitch(const SwitchStmt* s);
     void analyzeNamespace(const NamespaceStmt* s);
+    void analyzePrint(const PrintStmt* s);
 
     void analyzeCase(const CaseStmt* s, const PrimitiveType& switch_type);
     void analyzeDefault(const DefaultStmt* s);

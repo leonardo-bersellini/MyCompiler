@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(MyCompiler 
-    VERSION 1.10.2
+    VERSION 1.11.0
     LANGUAGES CXX
     DESCRIPTION "Bismuth: compilatore sviluppato in C++ e LLVM"
 )
@@ -117,15 +117,17 @@ target_link_libraries(BismuthCore PUBLIC ${LLVM_LIBS})
 
 # BISMUTH COMPILER EXECUTABLE
 
-add_subdirectory(runtime)
-
 add_executable(Bismuth 
   main.cpp
 )
 
 target_link_libraries(Bismuth PRIVATE BismuthCore)
-target_link_libraries(Bismuth PRIVATE BismuthRuntime)
 target_link_options(Bismuth PRIVATE -static -static-libgcc -static-libstdc++ -Wl,--gc-sections)
+
+
+# ADD BSM RUNTIMES
+
+add_subdirectory(runtime)
 
 
 # BISMUTH TESTING

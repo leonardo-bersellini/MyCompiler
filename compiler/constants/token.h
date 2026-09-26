@@ -35,6 +35,7 @@ enum class TokenType {
     VoidKeyword,
     ConstKeyword,
     NamespaceKeyword,
+    PrintKeyword,
 
     SwitchKeyword,
     CaseKeyword,
@@ -115,6 +116,7 @@ namespace
         {TokenType::DefaultKeyword, "default"},
         {TokenType::BreakKeyword, "break"},
         {TokenType::ContinueKeyword, "continue"},
+        {TokenType::PrintKeyword, "print()"},
         {TokenType::Plus, "+"},
         {TokenType::Minus, "-"},
         {TokenType::Star, "*"},

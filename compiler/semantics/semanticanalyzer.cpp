@@ -160,6 +160,12 @@ void SemanticAnalyzer::analyzeStmt(const Stmt *stmt)
         analyzeNamespace(s);
     }
 
+    // Print Call
+    else if(auto s = dynamic_cast<const PrintStmt*>(stmt))
+    {
+        analyzePrint(s);
+    }
+
     // Errore
     else if(auto s = dynamic_cast<const ErrorStmt*>(stmt))
     {
@@ -458,6 +464,33 @@ void SemanticAnalyzer::analyzeNamespace(const NamespaceStmt* s)
     namespaceTable->pop();
 }
 
+/*
+ * Questa funzione gestiste l'analisi di una chiamata alla funzione built-in print();
+ * Il contenuto di print, ovvero l'unico parametro, deve essere un espressione riconducibile
+ * ad un array di caratteri da stampare.
+ */
+
+void SemanticAnalyzer::analyzePrint(const PrintStmt* s)
+{
+    ExprAnalysisResult result = analyzeExpr(s->content.get());
+
+    if(result.type.isError() || result.type.asPrimitive() == PrimitiveType::Void) {
+        errorLog->addError("invalid parameter type in print() call (" + types::toString(result.type) + ")", s->position);
+        return;
+    }
+
+    if(result.type.asPrimitive() != PrimitiveType::Error && 
+    (result.type.asPrimitive() != PrimitiveType::Bool || result.type.asPrimitive() != PrimitiveType::Char)) 
+    {
+        errorLog->addError("invalid call to print() function. parameter type: " + types::toString(result.type), s->position);
+        return;
+    }
+
+    if(result.type.isArray() && std::get<ArrayType>(result.type.category).elementType != PrimitiveType::Char) {
+        errorLog->addError("invalid call to print() function using an array value as parameter.", s->position);
+        return;
+    }
+}
 
 /*
  * Analizza l'espressione fornita come parametro.
