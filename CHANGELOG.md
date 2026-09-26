@@ -31,9 +31,39 @@ each written as `field_name:` followed by its value.
 
  ---
 
+ **V 1.11.2** &ensp; <@leonardo-bersellini> &emsp; 26 . 09 . 2026
+
+ `commit:` Implemented print for numeric values *-o- (de2073b)* 
+ <br>
+ `scope:`  Print, Codegen, Runtimes
+ <br>
+ `features:` added support for double and int values in print function
+
+ ---
+
+ **V 1.11.0** &ensp; <@leonardo-bersellini> &emsp; 26 . 09 . 2026
+
+ `commit:` Built-in Print Function  *-o- (4651c9b)* 
+ <br>
+ `scope:`  All
+ <br>
+ `features:` print function that works using bsm runtimes.
+
+ ---
+
+ **V 1.10.2** &ensp; <@leonardo-bersellini> &emsp; 21 . 09 . 2026
+
+ `commit:` Added source position tracking to AST nodes *-o- (b83ddce )* 
+ <br>
+ `scope:`  Semantics, Parser, AST, ErrorLog
+ <br>
+ `features:` positions data for every ast node
+
+ ---
+
  **V 1.10.1** &ensp; <@leonardo-bersellini> &emsp; 20 . 09 . 2026
 
- `commit:` Extracted Linker from Codegen *-o- ()* 
+ `commit:` Extracted Linker from Codegen *-o- (4cb663b)* 
  <br>
  `scope:`  Codegen
  <br>
